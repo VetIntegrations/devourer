@@ -1,5 +1,7 @@
 aiohttp[speedups]
 envparse
 aioredis
+pyyaml
+google-cloud-logging
 
 gunicorn

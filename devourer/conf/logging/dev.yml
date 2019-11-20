@@ -1,0 +1,26 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  simple:
+    format: "%(asctime)s (%(name)s) [%(levelname)s] %(message)s"
+
+filters:
+  require_debug_true:
+    (): django.utils.log.RequireDebugTrue
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+  cloud_logging:
+    class: google.cloud.logging.handlers.handlers.CloudLoggingHandler
+    level: INFO
+    formatter: simple
+
+loggers:
+  devourer:
+    level: INFO
+    handlers:
+      - cloud_logging
