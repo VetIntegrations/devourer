@@ -28,6 +28,8 @@ GCP_PUBSUB_PUBLIC_TOPIC = env.str('GCP_PUBSUB_PUBLIC_TOPIC')
 VETSUCCESS_REDSHIFT_DSN = env.str('VETSUCCESS_REDSHIFT_DSN', default=None)
 
 
+SENTRY_DSN = env.str('SENTRY_DSN')
+
 # Logging
 LOGGING_CONFIG = env.str('LOGGING_CONFIG', default='logging.config.dictConfig')
 log_config_path = os.path.join(

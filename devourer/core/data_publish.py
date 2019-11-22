@@ -1,4 +1,5 @@
 import json
+import sentry_sdk
 from google.cloud import pubsub_v1
 
 from devourer import config
@@ -19,6 +20,9 @@ class DataPublisher:
 
         future = self.client.publish(self.topic_path, data=msg.encode('utf-8'))
 
-        # TODO: if future.canceled: post future.exception()
+        try:
+            future.result()
+        except Exception as ex:
+            sentry_sdk.capture_exception(ex)
 
         return future.done()

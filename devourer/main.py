@@ -1,6 +1,8 @@
 import os
 import aioredis
+import sentry_sdk
 from aiohttp import web
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from . import config
 from .utils import log, module_loading
@@ -39,6 +41,11 @@ async def healthcheck(request):
 
 async def get_application() -> web.Application:
     log.configure_logging(config.LOGGING_CONFIG, config.LOGGING)
+
+    sentry_sdk.init(
+        dsn=config.SENTRY_DSN,
+        integrations=[AioHttpIntegration()]
+    )
 
     app = web.Application()
     app.on_startup.append(on_startup)

@@ -13,6 +13,9 @@ def test_datapublisher(monkeypatch):
 
     class FakeFuture:
 
+        def result(self):
+            log.append('future-result')
+
         def done(self):
             log.append('future-done')
 
@@ -39,5 +42,6 @@ def test_datapublisher(monkeypatch):
     assert log == [
         ('topic_path', TEST_GCP_PROJECT_ID, TEST_GCP_PUBSUB_PUBLIC_TOPIC),
         ('publish', f'{TEST_GCP_PROJECT_ID}/{TEST_GCP_PUBSUB_PUBLIC_TOPIC}', b'{"msg": "Hello"}'),
-        'future-done'
+        'future-result',
+        'future-done',
     ]
