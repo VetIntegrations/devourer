@@ -1,4 +1,6 @@
 -r common.in
 
 pytest
+pytest-aiohttp
+pytest-cov
 pylama

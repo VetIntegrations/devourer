@@ -1,14 +1,16 @@
+import os
 import aioredis
 from aiohttp import web
 
 from . import config
-from .utils import log
+from .utils import log, module_loading
+from .core.datasource import exceptions
 
 
 async def create_redis_pool() -> aioredis.ConnectionsPool:
-    return await aioredis.create_pool(
-        (config.REDIS_HOST, config.REDIS_PORT),
-        db=config.REDIS_DB
+    return await aioredis.create_redis_pool(
+        (config.REDIS_HOST, config.REDIS_PORT)
+        # db=config.REDIS_DB
     )
 
 
@@ -17,7 +19,18 @@ async def on_startup(app: web.Application):
 
 
 async def on_shutdown(app: web.Application):
-    await app['redis_pool'].clear()
+    app['redis_pool'].close()
+    await app['redis_pool'].wait_closed()
+
+
+def init_datasources(app: web.Application, url_prefix: str):
+    for url_name, name in config.DATA_SOURCES:
+        try:
+            module = module_loading.import_string(f"devourer.datasources.{name}.setup.DataSourceSetup")
+        except ImportError as e:
+            raise exceptions.NoDataSourceFound(f"Data source `{name}` plugin not found") from e
+        else:
+            module(app, os.path.join(url_prefix, url_name))()
 
 
 async def healthcheck(request):
@@ -30,6 +43,8 @@ async def get_application() -> web.Application:
     app = web.Application()
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
+
+    init_datasources(app, '/api/v1')
 
     app.add_routes([
         web.get('/', healthcheck),

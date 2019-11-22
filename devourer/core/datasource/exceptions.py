@@ -1,0 +1,6 @@
+class DataSourceException(Exception):
+    ...
+
+
+class NoDataSourceFound(DataSourceException):
+    ...

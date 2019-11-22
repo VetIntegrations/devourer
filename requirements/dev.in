@@ -1,4 +1,4 @@
--r common.in
+-r ci.in
 
 jedi
 epc
