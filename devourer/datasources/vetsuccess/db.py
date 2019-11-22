@@ -57,7 +57,6 @@ class DB:
             TableConfig('dates', None, 'record_date'),
             TableConfig('emails', None, 'id'),
             TableConfig('invoices', 'source_updated_at', None),
-            # TableConfig('monitoring_recent_dates', None),
             TableConfig('patients', None, 'id'),
             TableConfig('payment_transactions', 'source_updated_at', None),
             TableConfig('phones', None, 'id'),

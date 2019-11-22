@@ -4,5 +4,6 @@ aioredis
 aiopg
 pyyaml
 google-cloud-logging
+google-cloud-pubsub
 
 gunicorn

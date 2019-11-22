@@ -20,9 +20,12 @@ DATA_SOURCES = (
     ("vetsuccess", "vetsuccess"),
 )
 
+# Data Publishing
+GCP_PROJECT_ID = env.str('GCP_PROJECT_ID')
+GCP_PUBSUB_PUBLIC_TOPIC = env.str('GCP_PUBSUB_PUBLIC_TOPIC')
 
 # DataSource: VetSuccess
-VETSUCCESS_REDSHIFT_DSN = env.str("VETSUCCESS_REDSHIFT_DSN", default=None)
+VETSUCCESS_REDSHIFT_DSN = env.str('VETSUCCESS_REDSHIFT_DSN', default=None)
 
 
 # Logging
