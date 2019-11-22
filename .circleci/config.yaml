@@ -1,0 +1,50 @@
+version: 2
+
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "requirements/ci.txt" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+      - run:
+          name: Install Requirements
+          command: |
+            python3 -m venv venv
+            . venv/bin/activate
+            pip3 install -r requirements/ci.txt
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "requirements/ci.txt" }}
+      - run:
+          name: Python Version
+          command: pyton3 -V
+      - run:
+          name: Tests
+          when: always
+          environment:
+            REDIS_HOST: localhost
+            REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
+            GCP_PROJECT_ID: vis-devourer-test
+            GCP_PUBSUB_PUBLIC_TOPIC: vis-devourer-test
+            LOG_CONFIG_FILENAME: local.yml
+            SENTRY_DSN:
+          command: |
+            . ./venv/bin/activate
+            python -m pytest --pylama --cov=. --cov-report term --cov-report html:../tests_artifacts/cov_html .
+      - store_articacts:
+          path: ../tests_artifacts/
+          destination: tests_artifacts
+
+
+workflow:
+  version: 2
+
+  devourer:
+    jobs:
+      - api
