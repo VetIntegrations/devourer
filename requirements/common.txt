@@ -17,12 +17,14 @@ certifi==2019.9.11        # via requests
 cffi==1.13.2              # via brotlipy, pycares
 chardet==3.0.4            # via aiohttp, requests
 envparse==0.2.0
-google-api-core[grpc]==1.14.3  # via google-cloud-core, google-cloud-logging
+google-api-core[grpc]==1.14.3  # via google-cloud-core, google-cloud-logging, google-cloud-pubsub
 google-auth==1.7.1        # via google-api-core
 google-cloud-core==1.0.3  # via google-cloud-logging
 google-cloud-logging==1.14.0
-googleapis-common-protos==1.6.0  # via google-api-core
-grpcio==1.25.0            # via google-api-core
+google-cloud-pubsub==1.0.2
+googleapis-common-protos[grpc]==1.6.0  # via google-api-core, grpc-google-iam-v1
+grpc-google-iam-v1==0.12.3  # via google-cloud-pubsub
+grpcio==1.25.0            # via google-api-core, googleapis-common-protos, grpc-google-iam-v1
 gunicorn==20.0.0
 hiredis==1.0.1            # via aioredis
 idna==2.8                 # via requests, yarl

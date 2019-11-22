@@ -1,5 +1,7 @@
+import asyncio
 from aiohttp import web
 
+from devourer.core import data_publish
 from . import db
 
 
@@ -7,13 +9,21 @@ class VetSuccessImportRun(web.View):
 
     async def get(self) -> web.Response:
         conn = await db.connect(self.request.app['redis_pool'])
+        publisher = data_publish.DataPublisher()
 
-        # data = {}
+        loop = asyncio.get_event_loop()
         async for table_name, record in conn.get_updates():
-            # if table_name not in data:
-            #     data[table_name] = []
-            # data[table_name].append(record)
-            ...  # process new data
+            await loop.run_in_executor(
+                None,
+                publisher.publish,
+                {
+                    'meta': {
+                        'data_source': 'vetsuccess',
+                        'table_name': table_name,
+                    },
+                    'data': record,
+                }
+            )
 
         return web.Response(
             content_type='application/json',

@@ -1,6 +1,6 @@
 name: VIS Devourer
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
 
@@ -39,6 +39,8 @@ jobs:
         env:
           REDIS_HOST: localhost
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
+          GCP_PROJECT_ID: vis-devourer-test
+          GCP_PUBSUB_PUBLIC_TOPIC: vis-devourer-test
           LOG_CONFIG_FILENAME: local.yml
         run: |
           python -m pytest --pylama --cov=. --cov-report term --cov-report html:../tests_artifacts/cov_html .
