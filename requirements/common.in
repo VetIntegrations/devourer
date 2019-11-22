@@ -1,6 +1,7 @@
 aiohttp[speedups]
 envparse
 aioredis
+aiopg
 pyyaml
 google-cloud-logging
 

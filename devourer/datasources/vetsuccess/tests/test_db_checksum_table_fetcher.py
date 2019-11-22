@@ -52,7 +52,7 @@ async def test_is_changed(stor_data, input_data, expected):
     (
         (1, 1),
         (436728, 436728),
-        (datetime(2019, 11, 21, 15, 58), 1574344680)
+        (datetime.fromtimestamp(1574344680), 1574344680),
     )
 )
 def test_checksum_column_normalization(input_data, expected):
