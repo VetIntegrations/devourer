@@ -1,7 +1,11 @@
 import pytest
+from datetime import datetime
 from collections import namedtuple
 
 from devourer.datasources.vetsuccess import db
+
+
+TIMESTAMP = 1574346720
 
 
 @pytest.mark.parametrize(
@@ -15,8 +19,11 @@ from devourer.datasources.vetsuccess import db
                 'acquire',
                 'cursor',
                 ('get', 'devourer.datasource.versuccess.timestamp-test'),
-                ('execute', "SELECT * FROM external.test WHERE update_at >= '2019-11-21 16:32:00'::timestamp "),
-                ('set', 'devourer.datasource.versuccess.timestamp-test', 1574346720),
+                (
+                    'execute',
+                    f"SELECT * FROM external.test WHERE update_at >= '{datetime.fromtimestamp(TIMESTAMP)}'::timestamp "
+                ),
+                ('set', 'devourer.datasource.versuccess.timestamp-test', TIMESTAMP),
             ],
         ),
         (
@@ -27,8 +34,14 @@ from devourer.datasources.vetsuccess import db
                 'acquire',
                 'cursor',
                 ('get', 'devourer.datasource.versuccess.timestamp-testing'),
-                ('execute', "SELECT * FROM external.testing WHERE refreshed_at >= '2019-11-21 16:32:00'::timestamp "),
-                ('set', 'devourer.datasource.versuccess.timestamp-testing', 1574346720),
+                (
+                    'execute',
+                    (
+                        "SELECT * FROM external.testing "
+                        f"WHERE refreshed_at >= '{datetime.fromtimestamp(TIMESTAMP)}'::timestamp "
+                    )
+                ),
+                ('set', 'devourer.datasource.versuccess.timestamp-testing', TIMESTAMP),
             ],
         ),
     )
@@ -38,7 +51,7 @@ async def test_fetch(tableconfig, input_data, expected_result, expected_log, mon
 
     input_data = iter(input_data)
 
-    monkeypatch.setattr(db.time, 'time', lambda: 1574346720)
+    monkeypatch.setattr(db.time, 'time', lambda: TIMESTAMP)
     fetcher = db.TimestampedTableFetcher(
         tableconfig,
         FakeDB(tableconfig.checksum_column, input_data, log),
