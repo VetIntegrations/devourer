@@ -36,11 +36,8 @@ jobs:
             SENTRY_DSN:
           command: |
             . ./venv/bin/activate
-            python -m pytest --pylama --junitxml=../tests_artifacts --cov=. --cov-report term --cov-report html:../tests_artifacts/cov_html .
-      - store_test_results:
-          path: ../tests_artifacts/
-          destination: tests_artifacts
-      - store_artifacts:
+            python -m pytest --pylama --cov=. --cov-report term --cov-report html:../tests_artifacts/cov_html .
+      - store_articacts:
           path: ../tests_artifacts/
           destination: tests_artifacts
 
@@ -50,4 +47,4 @@ workflow:
 
   devourer:
     jobs:
-      - test
+      - api
