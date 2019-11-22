@@ -42,6 +42,7 @@ jobs:
           GCP_PROJECT_ID: vis-devourer-test
           GCP_PUBSUB_PUBLIC_TOPIC: vis-devourer-test
           LOG_CONFIG_FILENAME: local.yml
+          SENTRY_DSN:
         run: |
           python -m pytest --pylama --cov=. --cov-report term --cov-report html:../tests_artifacts/cov_html .
       - name: Test Artifacts
