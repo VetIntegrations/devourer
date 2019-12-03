@@ -1,38 +1,44 @@
-from devourer.datasources.vetsuccess import db
+from devourer.datasources.vetsuccess import db, tables
 
 
 def test_table_to_import():
     conn = db.DB(None, None)
 
-    assert conn.get_tables() == (
-        db.TableConfig('aaha_accounts', None, 'id'),
-        db.TableConfig('clients', None, 'id'),
-        db.TableConfig('client_attributes', None, 'id'),
-        db.TableConfig('code_tag_mappings', None, 'id'),
-        db.TableConfig('code_tags', None, 'id'),
-        db.TableConfig('codes', None, 'id'),
-        db.TableConfig('dates', None, 'record_date'),
-        db.TableConfig('emails', None, 'id'),
-        db.TableConfig('invoices', 'source_updated_at', None),
-        # db.TableConfig('monitoring_recent_dates', None),
-        db.TableConfig('patients', None, 'id'),
-        db.TableConfig('payment_transactions', 'source_updated_at', None),
-        db.TableConfig('phones', None, 'id'),
-        db.TableConfig('practices', None, 'id'),
-        db.TableConfig('reminders', 'source_updated_at', None),
-        db.TableConfig('resources', None, 'id'),
-        db.TableConfig('revenue_categories_hierarchy', None, 'id'),
-        db.TableConfig('revenue_transactions', 'source_updated_at', None),
-        db.TableConfig('schedules', 'source_updated_at', None),
-        db.TableConfig('sites', None, 'id'),
+    expected = (
+        tables.TableConfig('aaha_accounts', None, 'id'),
+        tables.TableConfig('clients', None, 'id', 'vetsuccess_id'),
+        tables.TableConfig('client_attributes', None, 'id'),
+        tables.TableConfig('code_tag_mappings', None, 'id'),
+        tables.TableConfig('code_tags', None, 'id'),
+        tables.TableConfig('codes', None, 'id'),
+        tables.TableConfig('dates', None, 'record_date'),
+        tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'),
+        tables.TableConfig('invoices', 'source_updated_at', None),
+        tables.PatientTableConfig('patients', None, 'id', 'client_vetsuccess_id'),
+        tables.TableConfig('payment_transactions', 'source_updated_at', None),
+        tables.TableConfig('phones', None, 'id'),
+        tables.TableConfig('practices', None, 'id'),
+        tables.TableConfig('reminders', 'source_updated_at', None),
+        tables.TableConfig('resources', None, 'id'),
+        tables.TableConfig('revenue_categories_hierarchy', None, 'id'),
+        tables.TableConfig('revenue_transactions', 'source_updated_at', None),
+        tables.TableConfig('schedules', 'source_updated_at', None),
+        tables.TableConfig('sites', None, 'id'),
     )
+
+    for table, expect in zip(conn.get_tables(), expected):
+        assert table.__class__ == expect.__class__
+        assert table.name == expect.name
+        assert table.timestamp_column == expect.timestamp_column
+        assert table.checksum_column == expect.checksum_column
+        assert table.order_by == expect.order_by
 
 
 async def test_get_updates(monkeypatch):
     def get_tables():
         return (
-            db.TableConfig('test-checksum', None, 'id'),
-            db.TableConfig('test-timestamped', 'updated_at', None),
+            tables.TableConfig('test-checksum', None, 'id'),
+            tables.TableConfig('test-timestamped', 'updated_at', None),
         )
 
     monkeypatch.setattr(db, 'TimestampedTableFetcher', FakeFetcher.build('timestampled-fetcher', [1, 2]))

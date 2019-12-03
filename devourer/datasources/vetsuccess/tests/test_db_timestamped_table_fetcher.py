@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime
 from collections import namedtuple
 
-from devourer.datasources.vetsuccess import db
+from devourer.datasources.vetsuccess import db, tables
 
 
 TIMESTAMP = 1574346720
@@ -12,7 +12,7 @@ TIMESTAMP = 1574346720
     'tableconfig, input_data, expected_result, expected_log',
     (
         (
-            db.TableConfig('test', 'update_at', None),
+            tables.TableConfig('test', 'update_at', None),
             ((1, 'N1', 53), (2, 'N2', 103)),
             [{'id': 1, 'name': 'N1', 'amount': 53}, {'id': 2, 'name': 'N2', 'amount': 103}],
             [
@@ -21,13 +21,16 @@ TIMESTAMP = 1574346720
                 ('get', 'devourer.datasource.versuccess.timestamp-test'),
                 (
                     'execute',
-                    f"SELECT * FROM external.test WHERE update_at >= '{datetime.fromtimestamp(TIMESTAMP)}'::timestamp "
+                    (
+                        f"SELECT * FROM external.test "
+                        f"WHERE update_at >= '{datetime.fromtimestamp(TIMESTAMP)}'::timestamp ORDER BY id "
+                    ),
                 ),
                 ('set', 'devourer.datasource.versuccess.timestamp-test', TIMESTAMP),
             ],
         ),
         (
-            db.TableConfig('testing', 'refreshed_at', None),
+            tables.TableConfig('testing', 'refreshed_at', None),
             ((2, 'N2', 103), ),
             [{'id': 2, 'name': 'N2', 'amount': 103}, ],
             [
@@ -39,6 +42,7 @@ TIMESTAMP = 1574346720
                     (
                         "SELECT * FROM external.testing "
                         f"WHERE refreshed_at >= '{datetime.fromtimestamp(TIMESTAMP)}'::timestamp "
+                        "ORDER BY id "
                     )
                 ),
                 ('set', 'devourer.datasource.versuccess.timestamp-testing', TIMESTAMP),

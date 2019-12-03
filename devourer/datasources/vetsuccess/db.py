@@ -3,17 +3,14 @@ import aioredis
 import logging
 import time
 import typing
-from collections import namedtuple
 from datetime import datetime, date
 from hashlib import sha1
 
 from devourer import config
+from . import tables
 
 
 logger = logging.getLogger('devourer.datasource.vetsuccess')
-
-
-TableConfig = namedtuple('TableConfig', ('name', 'timestamp_column', 'checksum_column'))
 
 
 class DB:
@@ -46,27 +43,27 @@ class DB:
         total = time.time() - start
         logger.info(f'import VetSuccess for {total} sec, {total_new_records} new records')
 
-    def get_tables(self) -> typing.Iterable[TableConfig]:
+    def get_tables(self) -> typing.Iterable[tables.TableConfig]:
         return (
-            TableConfig('aaha_accounts', None, 'id'),
-            TableConfig('clients', None, 'id'),
-            TableConfig('client_attributes', None, 'id'),
-            TableConfig('code_tag_mappings', None, 'id'),
-            TableConfig('code_tags', None, 'id'),
-            TableConfig('codes', None, 'id'),
-            TableConfig('dates', None, 'record_date'),
-            TableConfig('emails', None, 'id'),
-            TableConfig('invoices', 'source_updated_at', None),
-            TableConfig('patients', None, 'id'),
-            TableConfig('payment_transactions', 'source_updated_at', None),
-            TableConfig('phones', None, 'id'),
-            TableConfig('practices', None, 'id'),
-            TableConfig('reminders', 'source_updated_at', None),
-            TableConfig('resources', None, 'id'),
-            TableConfig('revenue_categories_hierarchy', None, 'id'),
-            TableConfig('revenue_transactions', 'source_updated_at', None),
-            TableConfig('schedules', 'source_updated_at', None),
-            TableConfig('sites', None, 'id'),
+            tables.TableConfig('aaha_accounts', None, 'id'),
+            tables.TableConfig('clients', None, 'id', 'vetsuccess_id'),
+            tables.TableConfig('client_attributes', None, 'id'),
+            tables.TableConfig('code_tag_mappings', None, 'id'),
+            tables.TableConfig('code_tags', None, 'id'),
+            tables.TableConfig('codes', None, 'id'),
+            tables.TableConfig('dates', None, 'record_date'),
+            tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'),
+            tables.TableConfig('invoices', 'source_updated_at', None),
+            tables.PatientTableConfig('patients', None, 'id', 'client_vetsuccess_id'),
+            tables.TableConfig('payment_transactions', 'source_updated_at', None),
+            tables.TableConfig('phones', None, 'id'),
+            tables.TableConfig('practices', None, 'id'),
+            tables.TableConfig('reminders', 'source_updated_at', None),
+            tables.TableConfig('resources', None, 'id'),
+            tables.TableConfig('revenue_categories_hierarchy', None, 'id'),
+            tables.TableConfig('revenue_transactions', 'source_updated_at', None),
+            tables.TableConfig('schedules', 'source_updated_at', None),
+            tables.TableConfig('sites', None, 'id'),
         )
 
 
@@ -149,7 +146,7 @@ class TimestampStorage:
 
 class TimestampedTableFetcher:
 
-    def __init__(self, table: TableConfig, db: aiopg.Pool, redis: aioredis.ConnectionsPool):
+    def __init__(self, table: tables.TableConfig, db: aiopg.Pool, redis: aioredis.ConnectionsPool):
         self.table = table
         self.db = db
         self.redis = redis
@@ -159,10 +156,7 @@ class TimestampedTableFetcher:
             async with conn.cursor() as cur:
                 async with TimestampStorage(self.table.name, self.redis) as stor:
                     timestamp = datetime.fromtimestamp(await stor.get_latest())
-                    await cur.execute(
-                        f'SELECT * FROM external.{self.table.name} '
-                        f"WHERE {self.table.timestamp_column} >= '{timestamp}'::timestamp "
-                    )
+                    await cur.execute(self.table.get_sql() % {'timestamp': timestamp})
 
                     column_names = [
                         column.name
@@ -175,7 +169,7 @@ class TimestampedTableFetcher:
 
 class ChecksumTableFether:
 
-    def __init__(self, table: TableConfig, db: aiopg.Pool, redis: aioredis.ConnectionsPool):
+    def __init__(self, table: tables.TableConfig, db: aiopg.Pool, redis: aioredis.ConnectionsPool):
         self.table = table
         self.db = db
         self.redis = redis
@@ -185,10 +179,7 @@ class ChecksumTableFether:
     async def fetch(self):
         async with self.db.acquire() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(
-                    f'SELECT * FROM external.{self.table.name} '
-                    f'ORDER BY {self.table.checksum_column}'
-                )
+                await cur.execute(self.table.get_sql())
 
                 column_names = [
                     column.name
