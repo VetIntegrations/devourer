@@ -2,7 +2,7 @@ import pytest
 from collections import namedtuple
 from datetime import datetime
 
-from devourer.datasources.vetsuccess import db
+from devourer.datasources.vetsuccess import db, tables
 
 
 @pytest.mark.parametrize(
@@ -63,18 +63,18 @@ def test_checksum_column_normalization(input_data, expected):
     'tableconfig, input_data, is_changed_vals, expected_result, expected_log',
     (
         (
-            db.TableConfig('test', None, 'id'),
+            tables.TableConfig('test', None, 'id'),
             ((1, 'N1', 53), (2, 'N2', 103)),
             (True, True),
             [],
-            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.test ORDER BY id')],
+            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.test ORDER BY id ')],
         ),
         (
-            db.TableConfig('testing', None, 'date'),
+            tables.TableConfig('testing', None, 'date', 'date'),
             ((1, 'N1', 53), (2, 'N2', 103)),
             (True, False),
             [{'date': 2, 'name': 'N2', 'amount': 103}, ],
-            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.testing ORDER BY date')],
+            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.testing ORDER BY date ')],
         ),
     )
 )
