@@ -15,17 +15,21 @@ REDIS_HOST = env.str('REDIS_HOST', default='127.0.0.1')
 REDIS_PORT = env.int('REDIS_PORT', default=6379)
 REDIS_DB = env.int('REDIS_DB', default=1)
 
-
-DATA_SOURCES = (
-    ("vetsuccess", "vetsuccess"),
-)
-
 # Data Publishing
 GCP_PROJECT_ID = env.str('GCP_PROJECT_ID')
 GCP_PUBSUB_PUBLIC_TOPIC = env.str('GCP_PUBSUB_PUBLIC_TOPIC')
 
-# DataSource: VetSuccess
-VETSUCCESS_REDSHIFT_DSN = env.str('VETSUCCESS_REDSHIFT_DSN', default=None)
+# Customers config
+CUSTOMERS = {
+    'rarebreed': {
+        'name': 'Rarebreed',
+        'datasources': {
+            'vetsuccess': {
+                'redshift_dsn': env.str('RAREBREED_VETSUCCESS_REDSHIFT_DSN', default=None)
+            },
+        }
+    }
+}
 
 
 SENTRY_DSN = env.str('SENTRY_DSN')

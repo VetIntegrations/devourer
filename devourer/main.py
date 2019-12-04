@@ -25,14 +25,16 @@ async def on_shutdown(app: web.Application):
     await app['redis_pool'].wait_closed()
 
 
-def init_datasources(app: web.Application, url_prefix: str):
-    for url_name, name in config.DATA_SOURCES:
-        try:
-            module = module_loading.import_string(f"devourer.datasources.{name}.setup.DataSourceSetup")
-        except ImportError as e:
-            raise exceptions.NoDataSourceFound(f"Data source `{name}` plugin not found") from e
-        else:
-            module(app, os.path.join(url_prefix, url_name))()
+def init_customers(app: web.Application, url_prefix: str):
+    for customer, options in config.CUSTOMERS.items():
+        customer_url_prefix = os.path.join(url_prefix, customer)
+        for ds_name, ds_options in options['datasources'].items():
+            try:
+                module = module_loading.import_string(f'devourer.datasources.{ds_name}.setup.DataSourceSetup')
+            except ImportError as e:
+                raise exceptions.NoDataSourceFound(f"Data source `{ds_name}` plugin not found") from e
+            else:
+                module(app, os.path.join(customer_url_prefix, ds_name))(customer, ds_options)
 
 
 async def healthcheck(request):
@@ -51,7 +53,7 @@ async def get_application() -> web.Application:
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
-    init_datasources(app, '/api/v1')
+    init_customers(app, '/api/v1/import')
 
     app.add_routes([
         web.get('/', healthcheck),

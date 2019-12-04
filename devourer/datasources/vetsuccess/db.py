@@ -6,7 +6,6 @@ import typing
 from datetime import datetime, date
 from hashlib import sha1
 
-from devourer import config
 from . import tables
 
 
@@ -215,10 +214,7 @@ class ChecksumTableFether:
         return True
 
 
-async def connect(redis: aioredis.ConnectionsPool) -> DB:
-    pool = await aiopg.create_pool(
-        config.VETSUCCESS_REDSHIFT_DSN,
-        enable_hstore=False
-    )
+async def connect(dsn: str, redis: aioredis.ConnectionsPool) -> DB:
+    pool = await aiopg.create_pool(dsn, enable_hstore=False)
 
     return DB(pool, redis)
