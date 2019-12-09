@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 jobs:
   test:
@@ -49,10 +49,14 @@ jobs:
           path: ../tests_artifacts/
           destination: tests_artifacts
 
+orbs:
+  jira: circleci/jira@1.0.5
 
 workflows:
-  version: 2
+  version: 2.1
 
   devourer:
     jobs:
-      - test
+      - test:
+          post-steps:
+            - jira/notify
