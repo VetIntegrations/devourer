@@ -1,5 +1,7 @@
 import logging
 import logging.config
+import google.cloud.logging
+from google.cloud.logging.handlers.handlers import CloudLoggingHandler
 
 from devourer import config
 from . import module_loading
@@ -59,3 +61,11 @@ class RequireDebugFalse(logging.Filter):
 class RequireDebugTrue(logging.Filter):
     def filter(self, record):
         return config.DEBUG
+
+
+class GCPLoggingHandler(CloudLoggingHandler):
+
+    def __init__(self, *args, **kwargs):
+        client = google.cloud.logging.Client()
+
+        super().__init__(client, *args, **kwargs)

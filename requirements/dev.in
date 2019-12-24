@@ -1,5 +1,7 @@
 -r ci.in
 
+invoke
+
 jedi
 epc
 pyflakes
