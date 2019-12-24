@@ -7,7 +7,7 @@ formatters:
 
 filters:
   require_debug_true:
-    (): django.utils.log.RequireDebugTrue
+    (): devourer.utils.log.RequireDebugTrue
 
 handlers:
   console:
@@ -15,7 +15,7 @@ handlers:
     level: INFO
     formatter: simple
   cloud_logging:
-    class: google.cloud.logging.handlers.handlers.CloudLoggingHandler
+    class: devourer.utils.log.GCPLoggingHandler
     level: INFO
     formatter: simple
 

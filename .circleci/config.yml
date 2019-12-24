@@ -39,6 +39,7 @@ jobs:
             . ../venv/bin/activate
             python -m pytest \
               --pylama \
+              --ignore=./tasks \
               --junitxml=../tests_artifacts/junit.xml \
               --cov=. --cov-report=xml:../tests_artifacts/coverage.xml --cov-report=html:../tests_artifacts/coverage/ \
               .
