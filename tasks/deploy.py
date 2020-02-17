@@ -35,7 +35,7 @@ def deploy(ctx, project_id, image, envfile):
     )
     if len(vm_list) == 0:
         cmd = cmd.format(action='create-with-container')
-        cmd += '--tags https-server '
+        cmd += '--tags https-server,http-server '
     else:
         cmd = cmd.format(action='update-container')
 
@@ -57,4 +57,14 @@ def deploy(ctx, project_id, image, envfile):
             '--rules=tcp:443 '
             '--source-ranges=0.0.0.0/0 '
             '--target-tags=https-server'
+        )
+        ctx.run(
+            f'gcloud --project={project_id} compute firewall-rules create default-allow-http '
+            '--direction=INGRESS '
+            '--priority=1000 '
+            '--network=default '
+            '--action=ALLOW '
+            '--rules=tcp:80 '
+            '--source-ranges=0.0.0.0/0 '
+            '--target-tags=http-server'
         )

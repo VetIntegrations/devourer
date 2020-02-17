@@ -27,7 +27,6 @@ async def import_run(request, customer_name: str = None, options: dict = None) -
             }
         )
 
-    return web.Response(
-        content_type='application/json',
-        status=200
-    )
+    await conn.close()
+
+    return web.Response(status=200)

@@ -1,11 +1,12 @@
 import pytest
-from datetime import datetime
 from collections import namedtuple
+from datetime import datetime
 
 from devourer.datasources.vetsuccess import db, tables
 
 
-TIMESTAMP = 1574346720
+TIMESTAMP = 1574346720  # 2019-11-21T16:32:00
+TIMESTAMP_DT = datetime.fromtimestamp(TIMESTAMP).strftime('%Y-%m-%dT%H:%M:%S')
 
 
 @pytest.mark.parametrize(
@@ -23,7 +24,7 @@ TIMESTAMP = 1574346720
                     'execute',
                     (
                         f"SELECT * FROM external.test "
-                        f"WHERE update_at >= '{datetime.fromtimestamp(TIMESTAMP)}'::timestamp ORDER BY id "
+                        f"WHERE update_at >= '{TIMESTAMP_DT}'::timestamp ORDER BY id "
                     ),
                 ),
                 ('set', 'devourer.datasource.versuccess.timestamp-test', TIMESTAMP),
@@ -41,7 +42,7 @@ TIMESTAMP = 1574346720
                     'execute',
                     (
                         "SELECT * FROM external.testing "
-                        f"WHERE refreshed_at >= '{datetime.fromtimestamp(TIMESTAMP)}'::timestamp "
+                        f"WHERE refreshed_at >= '{TIMESTAMP_DT}'::timestamp "
                         "ORDER BY id "
                     )
                 ),

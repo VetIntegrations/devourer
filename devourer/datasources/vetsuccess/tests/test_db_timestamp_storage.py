@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime
 
 from devourer.datasources.vetsuccess import db
 
@@ -23,8 +24,8 @@ async def test_store_new_ts_on_exit(monkeypatch):
 @pytest.mark.parametrize(
     'tablename, timestamp, expected',
     (
-        ('test', 123, 123),
-        ('testing', None, 0),
+        ('test', 1574346720, datetime.fromtimestamp(1574346720)),
+        ('testing', None, datetime(1, 1, 1, 0, 0)),
     )
 )
 async def test_get_latest(tablename, timestamp, expected):

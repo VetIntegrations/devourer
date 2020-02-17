@@ -18,6 +18,9 @@ async def test_import_run(aiohttp_client, monkeypatch):
             for i in (1, 2, 3):
                 yield ('test_table', i)
 
+        async def close(self):
+            ...
+
     async def connect(dsn, redis):
         return DB()
 
