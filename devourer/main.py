@@ -7,6 +7,7 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from . import config
 from .utils import log, module_loading
 from .core.datasource import exceptions
+from .views import devtools
 
 
 async def create_redis_pool() -> aioredis.ConnectionsPool:
@@ -31,8 +32,8 @@ def init_customers(app: web.Application, url_prefix: str):
         for ds_name, ds_options in options['datasources'].items():
             try:
                 module = module_loading.import_string(f'devourer.datasources.{ds_name}.setup.DataSourceSetup')
-            except ImportError as e:
-                raise exceptions.NoDataSourceFound(f"Data source `{ds_name}` plugin not found") from e
+            except ImportError as ex:
+                raise exceptions.NoDataSourceFound(f"Data source `{ds_name}` plugin not found") from ex
             else:
                 module(app, os.path.join(customer_url_prefix, ds_name))(customer, ds_options)
 
@@ -58,5 +59,14 @@ async def get_application() -> web.Application:
     app.add_routes([
         web.get('/', healthcheck),
     ])
+
+    if config.DEBUG:
+        app.add_routes([
+            web.get('/admin/redis/delete/', devtools.redis_delete),
+            web.post('/admin/redis/set/', devtools.redis_set),
+            web.post('/admin/redis/hmset/', devtools.redis_hmset),
+            web.post('/admin/redis/storage-migrate/', devtools.redis_checksum_storage_migrate),
+            web.post('/admin/redis/idsmapping/rename/', devtools.idsmapping_rename),
+        ])
 
     return app

@@ -34,6 +34,8 @@ class DB:
             async for record in fetcher.fetch():
                 new_records += 1
                 yield (table.name, record)
+                if total_new_records % 1000 == 0:
+                    logger.info('import progress: %d of %s', total_new_records, table.name)
 
             total_new_records += new_records
             working_time = time.time() - table_start
@@ -41,6 +43,9 @@ class DB:
 
         total = time.time() - start
         logger.info(f'import VetSuccess for {total} sec, {total_new_records} new records')
+
+    async def close(self):
+        self._db.close()
 
     def get_tables(self) -> typing.Iterable[tables.TableConfig]:
         return (
@@ -53,7 +58,7 @@ class DB:
             tables.TableConfig('dates', None, 'record_date'),
             tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'),
             tables.TableConfig('invoices', 'source_updated_at', None),
-            tables.PatientTableConfig('patients', None, 'id', 'client_vetsuccess_id'),
+            tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'),
             tables.TableConfig('payment_transactions', 'source_updated_at', None),
             tables.TableConfig('phones', None, 'id'),
             tables.TableConfig('practices', None, 'id'),
@@ -68,13 +73,11 @@ class DB:
 
 class ChecksumStorage:
 
-    def __init__(self, table_name: str, redis: aioredis.ConnectionsPool, block_size: int = 1000):
+    def __init__(self, table_name: str, redis: aioredis.ConnectionsPool):
         self.table_name = table_name
         self.redis = redis
-        self.block_size = block_size
-        self.checksums = {}
+        self.checksums = None
         self.updated = {}
-        self.block_range = (-1, -1)
 
     async def __aenter__(self):
         return self
@@ -83,36 +86,30 @@ class ChecksumStorage:
         await self.sync_current_block()
 
     async def __getitem__(self, pk: int) -> str:
-        if pk < self.block_range[0] or pk > self.block_range[1]:
-            await self.sync_current_block()
-            self.checksums = await self.get_block(pk)
+        if self.checksums is None:
+            self.checksums = await self.get_block()
 
         return self.checksums.get(str(pk))
 
     def __setitem__(self, pk: int, checksum: str):
         self.updated[pk] = checksum
 
-    async def get_block(self, pk: int):
-        data = await self.redis.hgetall(self.get_storage_key(pk), encoding='utf-8')
-        self.block_range = (
-            pk // self.block_size * self.block_size,
-            pk // self.block_size * self.block_size + self.block_size
-        )
+    async def get_block(self):
+        data = await self.redis.hgetall(self.get_storage_key(), encoding='utf-8')
 
-        return data
+        return data or {}
 
     async def sync_current_block(self):
         if self.updated:
             await self.redis.hmset_dict(
-                self.get_storage_key(next(iter(self.updated.keys()))),
+                self.get_storage_key(),
                 self.updated
             )
             self.updated = {}
 
-    def get_storage_key(self, pk: int) -> str:
-        return 'devourer.datasource.versuccess.checksums-{}-{}'.format(
-            self.table_name,
-            pk // self.block_size
+    def get_storage_key(self) -> str:
+        return 'devourer.datasource.versuccess.checksums-{}'.format(
+            self.table_name
         )
 
 
@@ -133,9 +130,11 @@ class TimestampStorage:
         ts = await self.redis.get(self.get_storage_key())
 
         if ts is None:
-            ts = 0
+            last_update = datetime(1, 1, 1)
+        else:
+            last_update = datetime.fromtimestamp(int(ts))
 
-        return int(ts)
+        return last_update
 
     def get_storage_key(self) -> str:
         return 'devourer.datasource.versuccess.timestamp-{}'.format(
@@ -154,8 +153,8 @@ class TimestampedTableFetcher:
         async with self.db.acquire() as conn:
             async with conn.cursor() as cur:
                 async with TimestampStorage(self.table.name, self.redis) as stor:
-                    timestamp = datetime.fromtimestamp(await stor.get_latest())
-                    await cur.execute(self.table.get_sql() % {'timestamp': timestamp})
+                    timestamp = await stor.get_latest()
+                    await cur.execute(self.table.get_sql() % {'timestamp': timestamp.isoformat()})
 
                     column_names = [
                         column.name

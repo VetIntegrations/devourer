@@ -37,8 +37,9 @@ class PatientTableConfig(TableConfig):
 
     def get_sql(self) -> str:
         return (
-            f'SELECT DISTINCT {self.name}.vetsuccess_id, rt.client_vetsuccess_id, {self.name}.* '
+            f'SELECT DISTINCT {self.name}.vetsuccess_id, rel.client_vetsuccess_id, {self.name}.* '
             f'FROM external.{self.name} '
-            f'INNER JOIN external.revenue_transactions as rt ON rt.patient_vetsuccess_id = {self.name}.vetsuccess_id '
+            f'INNER JOIN external.client_patient_relationships as rel ON '
+            f'  rel.patient_vetsuccess_id = {self.name}.vetsuccess_id AND rel.is_primary = \'true\' '
             f'ORDER BY {self.order_by} '
         )

@@ -14,7 +14,7 @@ def test_table_to_import():
         tables.TableConfig('dates', None, 'record_date'),
         tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'),
         tables.TableConfig('invoices', 'source_updated_at', None),
-        tables.PatientTableConfig('patients', None, 'id', 'client_vetsuccess_id'),
+        tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'),
         tables.TableConfig('payment_transactions', 'source_updated_at', None),
         tables.TableConfig('phones', None, 'id'),
         tables.TableConfig('practices', None, 'id'),
