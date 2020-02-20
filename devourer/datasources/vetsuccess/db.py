@@ -1,8 +1,9 @@
-import aiopg
-import aioredis
 import logging
 import time
 import typing
+import itertools
+import aiopg
+import aioredis
 from datetime import datetime, date
 from hashlib import sha1
 
@@ -21,8 +22,7 @@ class DB:
     async def get_updates(self) -> typing.AsyncGenerator[typing.Tuple[str, dict], None]:
         start = time.time()
         total_new_records = 0
-        new_records = 0
-        for table in self.get_tables():
+        for (table, additional_data_fetcher) in self.get_tables():
             table_start = time.time()
             fetcher_class = TimestampedTableFetcher
             if table.timestamp_column is None:
@@ -33,9 +33,11 @@ class DB:
             new_records = 0
             async for record in fetcher.fetch():
                 new_records += 1
+                if additional_data_fetcher:
+                    record['_additionals'] = await additional_data_fetcher.fetch(record, table, self._db)
                 yield (table.name, record)
-                if total_new_records % 1000 == 0:
-                    logger.info('import progress: %d of %s', total_new_records, table.name)
+                if new_records % 1000 == 0:
+                    logger.info('import progress: %d of %s', new_records, table.name)
 
             total_new_records += new_records
             working_time = time.time() - table_start
@@ -49,25 +51,22 @@ class DB:
 
     def get_tables(self) -> typing.Iterable[tables.TableConfig]:
         return (
-            tables.TableConfig('aaha_accounts', None, 'id'),
-            tables.TableConfig('clients', None, 'id', 'vetsuccess_id'),
-            tables.TableConfig('client_attributes', None, 'id'),
-            tables.TableConfig('code_tag_mappings', None, 'id'),
-            tables.TableConfig('code_tags', None, 'id'),
-            tables.TableConfig('codes', None, 'id'),
-            tables.TableConfig('dates', None, 'record_date'),
-            tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'),
-            tables.TableConfig('invoices', 'source_updated_at', None),
-            tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'),
-            tables.TableConfig('payment_transactions', 'source_updated_at', None),
-            tables.TableConfig('phones', None, 'id'),
-            tables.TableConfig('practices', None, 'id'),
-            tables.TableConfig('reminders', 'source_updated_at', None),
-            tables.TableConfig('resources', None, 'id'),
-            tables.TableConfig('revenue_categories_hierarchy', None, 'id'),
-            tables.TableConfig('revenue_transactions', 'source_updated_at', None),
-            tables.TableConfig('schedules', 'source_updated_at', None),
-            tables.TableConfig('sites', None, 'id'),
+            (tables.TableConfig('aaha_accounts', None, 'id'), None),
+            (tables.TableConfig('clients', None, 'id', 'vetsuccess_id'), None),
+            (tables.TableConfig('client_attributes', None, 'id'), None),
+            (tables.CodeTableConfig('codes', None, 'id'), CodeAdditionalDataFetcher),
+            (tables.TableConfig('dates', None, 'record_date'), None),
+            (tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'), None),
+            (tables.TableConfig('invoices', 'source_updated_at', None), None),
+            (tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'), None),
+            (tables.TableConfig('payment_transactions', 'source_updated_at', None), None),
+            (tables.TableConfig('phones', None, 'id'), None),
+            (tables.TableConfig('practices', None, 'id'), None),
+            (tables.TableConfig('reminders', 'source_updated_at', None), None),
+            (tables.TableConfig('resources', None, 'id'), None),
+            (tables.TableConfig('revenue_transactions', 'source_updated_at', None), None),
+            (tables.TableConfig('schedules', 'source_updated_at', None), None),
+            (tables.TableConfig('sites', None, 'id'), None),
         )
 
 
@@ -211,6 +210,69 @@ class ChecksumTableFether:
             return False
 
         return True
+
+
+class CodeAdditionalDataFetcher:
+
+    @classmethod
+    async def fetch(cls, record: dict, table: tables.TableConfig, db: aiopg.Pool):
+        data = {}
+        async with db.acquire() as conn:
+            if record['pms_code_vetsuccess_id']:
+                data['code_tags'] = await cls.fetch_code_tags(record, table, conn)
+            if record['revenue_category_id']:
+                data['revenue_category'] = await cls.fetch_revenue_category(record, table, conn)
+
+        return data
+
+    @staticmethod
+    async def fetch_code_tags(record: dict, table: tables.TableConfig, conn: aiopg.Connection) -> list:
+        code_tags = []
+
+        async with conn.cursor() as cur:
+            await cur.execute(table.get_code_tags_sql(record['pms_code_vetsuccess_id']))
+
+            column_names = [
+                column.name
+                for column in cur.description
+            ]
+
+            async for rawdata in cur:
+                code_tags.append(dict(zip(column_names, rawdata)))
+
+            if code_tags:
+                ids = set(itertools.chain(*[
+                    code_tag['ancestry'].split('/')
+                    for code_tag in code_tags
+                ]))
+                await cur.execute(table.get_related_code_tags_sql(ids))
+                async for rawdata in cur:
+                    data = dict(zip(column_names, rawdata))
+                    code_tags.append(data)
+
+        return sorted(code_tags, key=lambda r: r['id'])
+
+    @staticmethod
+    async def fetch_revenue_category(record: dict, table: tables.TableConfig, conn: aiopg.Connection) -> dict:
+        revenue_category = None
+        async with conn.cursor() as cur:
+            for search_field in ('revenue_category_id', 'subset_of_level_2_id', 'subset_of_level_1_id'):
+                await cur.execute(table.get_revenue_category_sql(
+                    search_field,
+                    record['revenue_category_id']
+                ))
+
+                rawdata = await cur.fetchone()
+                if rawdata:
+                    column_names = [
+                        column.name
+                        for column in cur.description
+                    ]
+                    revenue_category = dict(zip(column_names, rawdata))
+
+                    break
+
+        return revenue_category
 
 
 async def connect(dsn: str, redis: aioredis.ConnectionsPool) -> DB:
