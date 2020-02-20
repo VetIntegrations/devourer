@@ -5,44 +5,59 @@ def test_table_to_import():
     conn = db.DB(None, None)
 
     expected = (
-        tables.TableConfig('aaha_accounts', None, 'id'),
-        tables.TableConfig('clients', None, 'id', 'vetsuccess_id'),
-        tables.TableConfig('client_attributes', None, 'id'),
-        tables.TableConfig('code_tag_mappings', None, 'id'),
-        tables.TableConfig('code_tags', None, 'id'),
-        tables.TableConfig('codes', None, 'id'),
-        tables.TableConfig('dates', None, 'record_date'),
-        tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'),
-        tables.TableConfig('invoices', 'source_updated_at', None),
-        tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'),
-        tables.TableConfig('payment_transactions', 'source_updated_at', None),
-        tables.TableConfig('phones', None, 'id'),
-        tables.TableConfig('practices', None, 'id'),
-        tables.TableConfig('reminders', 'source_updated_at', None),
-        tables.TableConfig('resources', None, 'id'),
-        tables.TableConfig('revenue_categories_hierarchy', None, 'id'),
-        tables.TableConfig('revenue_transactions', 'source_updated_at', None),
-        tables.TableConfig('schedules', 'source_updated_at', None),
-        tables.TableConfig('sites', None, 'id'),
+        (tables.TableConfig('aaha_accounts', None, 'id'), None),
+        (tables.TableConfig('clients', None, 'id', 'vetsuccess_id'), None),
+        (tables.TableConfig('client_attributes', None, 'id'), None),
+        (tables.CodeTableConfig('codes', None, 'id'), db.CodeAdditionalDataFetcher),
+        (tables.TableConfig('dates', None, 'record_date'), None),
+        (tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'), None),
+        (tables.TableConfig('invoices', 'source_updated_at', None), None),
+        (tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'), None),
+        (tables.TableConfig('payment_transactions', 'source_updated_at', None), None),
+        (tables.TableConfig('phones', None, 'id'), None),
+        (tables.TableConfig('practices', None, 'id'), None),
+        (tables.TableConfig('reminders', 'source_updated_at', None), None),
+        (tables.TableConfig('resources', None, 'id'), None),
+        (tables.TableConfig('revenue_transactions', 'source_updated_at', None), None),
+        (tables.TableConfig('schedules', 'source_updated_at', None), None),
+        (tables.TableConfig('sites', None, 'id'), None),
     )
 
-    for table, expect in zip(conn.get_tables(), expected):
-        assert table.__class__ == expect.__class__
-        assert table.name == expect.name
-        assert table.timestamp_column == expect.timestamp_column
-        assert table.checksum_column == expect.checksum_column
-        assert table.order_by == expect.order_by
+    for (table, addtional_fetcher), (expect_table, expect_additonal_fetcher) in zip(conn.get_tables(), expected):
+        assert table.__class__ == expect_table.__class__
+        assert table.name == expect_table.name
+        assert table.timestamp_column == expect_table.timestamp_column
+        assert table.checksum_column == expect_table.checksum_column
+        assert table.order_by == expect_table.order_by
 
 
 async def test_get_updates(monkeypatch):
+    log = []
+
+    class FakeAdditionalFetcher:
+
+        @staticmethod
+        async def fetch(data, *args):
+            log.append('additional_fetcher')
+
+            return data['id'] + 5
+
     def get_tables():
         return (
-            tables.TableConfig('test-checksum', None, 'id'),
-            tables.TableConfig('test-timestamped', 'updated_at', None),
+            (tables.TableConfig('test-checksum', None, 'id'), FakeAdditionalFetcher),
+            (tables.TableConfig('test-timestamped', 'updated_at', None), None),
         )
 
-    monkeypatch.setattr(db, 'TimestampedTableFetcher', FakeFetcher.build('timestampled-fetcher', [1, 2]))
-    monkeypatch.setattr(db, 'ChecksumTableFether', FakeFetcher.build('checksum-fetcher', [10, 20]))
+    monkeypatch.setattr(
+        db,
+        'TimestampedTableFetcher',
+        FakeFetcher.build('timestampled-fetcher', [{'id': 1}, {'id': 2}])
+    )
+    monkeypatch.setattr(
+        db,
+        'ChecksumTableFether',
+        FakeFetcher.build('checksum-fetcher', [{'id': 10}, {'id': 20}])
+    )
 
     _db = db.DB(None, None)
     monkeypatch.setattr(_db, 'get_tables', get_tables)
@@ -52,11 +67,12 @@ async def test_get_updates(monkeypatch):
         result.append(ret)
 
     assert result == [
-        ('test-checksum', 10),
-        ('test-checksum', 20),
-        ('test-timestamped', 1),
-        ('test-timestamped', 2),
+        ('test-checksum', {'id': 10, '_additionals': 15}),
+        ('test-checksum', {'id': 20, '_additionals': 25}),
+        ('test-timestamped', {'id': 1}),
+        ('test-timestamped', {'id': 2}),
     ]
+    assert log == ['additional_fetcher', 'additional_fetcher']
 
 
 class FakeFetcher:
