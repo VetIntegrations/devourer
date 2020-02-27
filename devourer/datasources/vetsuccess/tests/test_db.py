@@ -14,11 +14,11 @@ def test_table_to_import():
         (tables.TableConfig('invoices', 'source_updated_at', None), None),
         (tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'), None),
         (tables.TableConfig('payment_transactions', 'source_updated_at', None), None),
-        (tables.TableConfig('phones', None, 'id'), None),
+        (tables.TableConfig('phones', None, 'vetsuccess_id'), None),
         (tables.TableConfig('practices', None, 'id'), None),
         (tables.TableConfig('reminders', 'source_updated_at', None), None),
         (tables.TableConfig('resources', None, 'id'), None),
-        (tables.TableConfig('revenue_transactions', 'source_updated_at', None), None),
+        (tables.TableConfig('revenue_transactions', 'source_updated_at', 'vetsuccess_id'), None),
         (tables.TableConfig('schedules', 'source_updated_at', None), None),
         (tables.TableConfig('sites', None, 'id'), None),
     )

@@ -36,6 +36,9 @@ async def test_is_changed(stor_data, input_data, expected):
         def __setitem__(self, key, value):
             log.append(('new-value', key, value))
 
+        async def set(self, key, value):
+            log.append(('new-value', key, value))
+
     stor = FakeStorage()
     fetcher = db.ChecksumTableFether('test', None, None)
 
@@ -67,14 +70,14 @@ def test_checksum_column_normalization(input_data, expected):
             ((1, 'N1', 53), (2, 'N2', 103)),
             (True, True),
             [],
-            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.test ORDER BY id ')],
+            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.test ORDER BY id  LIMIT 10000 OFFSET 0')],
         ),
         (
             tables.TableConfig('testing', None, 'date', 'date'),
             ((1, 'N1', 53), (2, 'N2', 103)),
             (True, False),
             [{'date': 2, 'name': 'N2', 'amount': 103}, ],
-            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.testing ORDER BY date ')],
+            ['acquire', 'cursor', ('execute', 'SELECT * FROM external.testing ORDER BY date  LIMIT 10000 OFFSET 0')],
         ),
     )
 )
@@ -120,6 +123,10 @@ class FakeDB:
     def cursor(self):
         self.log.append('cursor')
         return self
+
+    @property
+    def rowcount(self):
+        return 0
 
     async def execute(self, sql):
         self.log.append(('execute', sql))

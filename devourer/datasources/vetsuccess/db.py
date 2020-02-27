@@ -60,17 +60,18 @@ class DB:
             (tables.TableConfig('invoices', 'source_updated_at', None), None),
             (tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'), None),
             (tables.TableConfig('payment_transactions', 'source_updated_at', None), None),
-            (tables.TableConfig('phones', None, 'id'), None),
+            (tables.TableConfig('phones', None, 'vetsuccess_id'), None),
             (tables.TableConfig('practices', None, 'id'), None),
             (tables.TableConfig('reminders', 'source_updated_at', None), None),
             (tables.TableConfig('resources', None, 'id'), None),
-            (tables.TableConfig('revenue_transactions', 'source_updated_at', None), None),
+            (tables.TableConfig('revenue_transactions', 'source_updated_at', 'vetsuccess_id'), None),
             (tables.TableConfig('schedules', 'source_updated_at', None), None),
             (tables.TableConfig('sites', None, 'id'), None),
         )
 
 
 class ChecksumStorage:
+    THRESHOLD = 1000
 
     def __init__(self, table_name: str, redis: aioredis.ConnectionsPool):
         self.table_name = table_name
@@ -92,6 +93,11 @@ class ChecksumStorage:
 
     def __setitem__(self, pk: int, checksum: str):
         self.updated[pk] = checksum
+
+    async def set(self, pk: int, checksum: str):
+        self[pk] = checksum
+        if len(self.updated) > self.THRESHOLD:
+            await self.sync_current_block()
 
     async def get_block(self):
         data = await self.redis.hgetall(self.get_storage_key(), encoding='utf-8')
@@ -153,15 +159,24 @@ class TimestampedTableFetcher:
             async with conn.cursor() as cur:
                 async with TimestampStorage(self.table.name, self.redis) as stor:
                     timestamp = await stor.get_latest()
-                    await cur.execute(self.table.get_sql() % {'timestamp': timestamp.isoformat()})
+                    sql = self.table.get_sql() % {'timestamp': timestamp.isoformat()}
+                    offset = 0
+                    limit = 10000
+                    while True:
+                        await cur.execute(f'{sql} LIMIT {limit} OFFSET {offset}')
 
-                    column_names = [
-                        column.name
-                        for column in cur.description
-                    ]
+                        column_names = [
+                            column.name
+                            for column in cur.description
+                        ]
 
-                    async for rawdata in cur:
-                        yield dict(zip(column_names, rawdata))
+                        async for rawdata in cur:
+                            yield dict(zip(column_names, rawdata))
+
+                        if cur.rowcount == 0:
+                            break
+
+                        offset += limit
 
 
 class ChecksumTableFether:
@@ -176,23 +191,32 @@ class ChecksumTableFether:
     async def fetch(self):
         async with self.db.acquire() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(self.table.get_sql())
+                sql = self.table.get_sql()
+                offset = 0
+                limit = 10000
+                while True:
+                    await cur.execute(f'{sql} LIMIT {limit} OFFSET {offset}')
 
-                column_names = [
-                    column.name
-                    for column in cur.description
-                ]
+                    column_names = [
+                        column.name
+                        for column in cur.description
+                    ]
 
-                async with ChecksumStorage(self.table.name, self.redis) as stor:
-                    async for rawdata in cur:
-                        data = dict(zip(column_names, rawdata))
-                        is_changed = await self.is_changed(
-                            stor,
-                            self.checksum_column_normalization(data[self.table.checksum_column]),
-                            rawdata
-                        )
-                        if not is_changed:
-                            yield data
+                    async with ChecksumStorage(self.table.name, self.redis) as stor:
+                        async for rawdata in cur:
+                            data = dict(zip(column_names, rawdata))
+                            is_changed = await self.is_changed(
+                                stor,
+                                self.checksum_column_normalization(data[self.table.checksum_column]),
+                                rawdata
+                            )
+                            if not is_changed:
+                                yield data
+
+                    if cur.rowcount == 0:
+                        break
+
+                    offset += limit
 
     @staticmethod
     def checksum_column_normalization(value):
@@ -205,7 +229,7 @@ class ChecksumTableFether:
         checksum = sha1(':'.join(map(str, data)).encode('utf-8')).hexdigest()
 
         if (await stor[pk]) != checksum:
-            stor[pk] = checksum
+            await stor.set(pk, checksum)
 
             return False
 
