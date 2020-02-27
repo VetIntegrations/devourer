@@ -24,7 +24,8 @@ TIMESTAMP_DT = datetime.fromtimestamp(TIMESTAMP).strftime('%Y-%m-%dT%H:%M:%S')
                     'execute',
                     (
                         f"SELECT * FROM external.test "
-                        f"WHERE update_at >= '{TIMESTAMP_DT}'::timestamp ORDER BY id "
+                        f"WHERE update_at >= '{TIMESTAMP_DT}'::timestamp "
+                        "ORDER BY id  LIMIT 10000 OFFSET 0"
                     ),
                 ),
                 ('set', 'devourer.datasource.versuccess.timestamp-test', TIMESTAMP),
@@ -43,7 +44,7 @@ TIMESTAMP_DT = datetime.fromtimestamp(TIMESTAMP).strftime('%Y-%m-%dT%H:%M:%S')
                     (
                         "SELECT * FROM external.testing "
                         f"WHERE refreshed_at >= '{TIMESTAMP_DT}'::timestamp "
-                        "ORDER BY id "
+                        "ORDER BY id  LIMIT 10000 OFFSET 0"
                     )
                 ),
                 ('set', 'devourer.datasource.versuccess.timestamp-testing', TIMESTAMP),
@@ -103,6 +104,10 @@ class FakeDB:
     def cursor(self):
         self.log.append('cursor')
         return self
+
+    @property
+    def rowcount(self):
+        return 0
 
     async def execute(self, sql):
         self.log.append(('execute', sql))
