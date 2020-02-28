@@ -47,6 +47,15 @@ class PatientTableConfig(TableConfig):
         )
 
 
+class PatientCoOwnerTableConfig(TableConfig):
+
+    def get_sql(self) -> str:
+        return (
+            f'SELECT {self.name}.* FROM external.{self.name} '
+            f'WHERE is_primary = \'false\' ORDER BY {self.order_by} '
+        )
+
+
 class CodeTableConfig(TableConfig):
 
     def get_code_tags_sql(self, pms_code_vetsuccess_id: str) -> str:
