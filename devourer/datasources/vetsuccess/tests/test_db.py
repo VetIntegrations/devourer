@@ -13,6 +13,7 @@ def test_table_to_import():
         (tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'), None),
         (tables.TableConfig('invoices', 'source_updated_at', None), None),
         (tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'), None),
+        (tables.PatientCoOwnerTableConfig('client_patient_relationships', None, 'id'), None),
         (tables.TableConfig('payment_transactions', 'source_updated_at', None), None),
         (tables.TableConfig('phones', None, 'vetsuccess_id'), None),
         (tables.TableConfig('practices', None, 'id'), None),
