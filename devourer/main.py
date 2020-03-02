@@ -5,7 +5,7 @@ from aiohttp import web
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from . import config
-from .utils import log, module_loading
+from .utils import log, module_loading, secret_manager
 from .core.datasource import exceptions
 from .views import devtools
 
@@ -18,6 +18,7 @@ async def create_redis_pool() -> aioredis.ConnectionsPool:
 
 
 async def on_startup(app: web.Application):
+    app['secretmanager'] = secret_manager.SecretManager(config.GCP_PROJECT_ID)
     app['redis_pool'] = await create_redis_pool()
 
 
@@ -29,13 +30,13 @@ async def on_shutdown(app: web.Application):
 def init_customers(app: web.Application, url_prefix: str):
     for customer, options in config.CUSTOMERS.items():
         customer_url_prefix = os.path.join(url_prefix, customer)
-        for ds_name, ds_options in options['datasources'].items():
+        for source_name in options['datasources']:
             try:
-                module = module_loading.import_string(f'devourer.datasources.{ds_name}.setup.DataSourceSetup')
+                module = module_loading.import_string(f'devourer.datasources.{source_name}.setup.DataSourceSetup')
             except ImportError as ex:
-                raise exceptions.NoDataSourceFound(f"Data source `{ds_name}` plugin not found") from ex
+                raise exceptions.NoDataSourceFound(f"Data source `{source_name}` plugin not found") from ex
             else:
-                module(app, os.path.join(customer_url_prefix, ds_name))(customer, ds_options)
+                module(app, os.path.join(customer_url_prefix, source_name))(customer)
 
 
 async def healthcheck(request):

@@ -17,12 +17,11 @@ class DataSourceSetupAbstract(abc.ABC):
 
     def to_route_view(
         self,
-        name: str,
+        path: str,
         view: typing.Type[web.View],
-        customer_name: str,
-        options: dict
+        customer_name: str
     ) -> web.RouteDef:
         return web.view(
-            os.path.join(self.url_prefix, name),
-            functools.partial(view, customer_name=customer_name, options=options)
+            os.path.join(self.url_prefix, path),
+            functools.partial(view, customer_name=customer_name)
         )

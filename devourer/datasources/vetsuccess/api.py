@@ -5,9 +5,11 @@ from devourer.core import data_publish
 from . import db
 
 
-async def import_run(request, customer_name: str = None, options: dict = None) -> web.Response:
+async def import_run(request, customer_name: str = None) -> web.Response:
+    config = request.app['secretmanager'].get_secret(customer_name)['vetsuccess']
+
     conn = await db.connect(
-        options['redshift_dsn'],
+        config['redshift_dsn'],
         request.app['redis_pool']
     )
     publisher = data_publish.DataPublisher()

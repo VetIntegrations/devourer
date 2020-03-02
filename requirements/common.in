@@ -5,6 +5,7 @@ aiopg
 pyyaml
 google-cloud-logging
 google-cloud-pubsub
+google-cloud-secret-manager
 sentry-sdk
 
 gunicorn

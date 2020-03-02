@@ -2,6 +2,7 @@ from devourer import config
 from devourer.main import get_application
 from devourer.core import data_publish
 from devourer.datasources.vetsuccess import db
+from devourer.utils import secret_manager
 
 
 async def test_import_run(aiohttp_client, monkeypatch):
@@ -21,6 +22,14 @@ async def test_import_run(aiohttp_client, monkeypatch):
         async def close(self):
             ...
 
+    class FakeSecretManger:
+
+        def __init__(self, project):
+            ...
+
+        def get_secret(self, name):
+            return {'vetsuccess': {'redshift_dsn': 'test-dsn'}}
+
     async def connect(dsn, redis):
         return DB()
 
@@ -29,14 +38,11 @@ async def test_import_run(aiohttp_client, monkeypatch):
         'CUSTOMERS',
         {
             'test-customer': {
-                'datasources': {
-                    'vetsuccess': {
-                        'redshift_dsn': 'test-dsn',
-                    }
-                },
+                'datasources': ('vetsuccess', ),
             }
         }
     )
+    monkeypatch.setattr(secret_manager, 'SecretManager', FakeSecretManger)
     monkeypatch.setattr(db, 'connect', connect)
     monkeypatch.setattr(data_publish, 'DataPublisher', FakePublisher)
 

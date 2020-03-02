@@ -23,11 +23,7 @@ GCP_PUBSUB_PUBLIC_TOPIC = env.str('GCP_PUBSUB_PUBLIC_TOPIC')
 CUSTOMERS = {
     'rarebreed': {
         'name': 'Rarebreed',
-        'datasources': {
-            'vetsuccess': {
-                'redshift_dsn': env.str('RAREBREED_VETSUCCESS_REDSHIFT_DSN', default=None)
-            },
-        }
+        'datasources': ('vetsuccess', ),
     }
 }
 
