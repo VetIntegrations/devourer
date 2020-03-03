@@ -11,7 +11,7 @@ def test_init_datasource(monkeypatch):
             testdata['app'] = app
             testdata['url_prefix'] = url_prefix
 
-        def __call__(self, customer_name, options):
+        def __call__(self, customer_name):
             testdata['called'] = True
 
     monkeypatch.setattr(
@@ -19,9 +19,7 @@ def test_init_datasource(monkeypatch):
         'CUSTOMERS',
         {
             'test-customer': {
-                'datasources': {
-                    'test-source': 'test_source',
-                },
+                'datasources': ('test-source', ),
             }
         }
     )
