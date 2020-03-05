@@ -5,23 +5,111 @@ def test_table_to_import():
     conn = db.DB(None, None)
 
     expected = (
-        (tables.TableConfig('aaha_accounts', None, 'id'), None),
-        (tables.TableConfig('clients', None, 'id', 'vetsuccess_id'), None),
-        (tables.TableConfig('client_attributes', None, 'id'), None),
-        (tables.CodeTableConfig('codes', None, 'id'), db.CodeAdditionalDataFetcher),
-        (tables.TableConfig('dates', None, 'record_date'), None),
-        (tables.TableConfig('emails', None, 'id', 'client_vetsuccess_id'), None),
-        (tables.TableConfig('invoices', 'source_updated_at', None), None),
-        (tables.PatientTableConfig('patients', None, 'vetsuccess_id', 'client_vetsuccess_id'), None),
-        (tables.PatientCoOwnerTableConfig('client_patient_relationships', None, 'id'), None),
-        (tables.TableConfig('payment_transactions', 'source_updated_at', None), None),
-        (tables.TableConfig('phones', None, 'vetsuccess_id'), None),
-        (tables.TableConfig('practices', None, 'id'), None),
-        (tables.TableConfig('reminders', 'source_updated_at', None), None),
-        (tables.TableConfig('resources', None, 'id'), None),
-        (tables.TableConfig('revenue_transactions', 'source_updated_at', 'vetsuccess_id'), None),
-        (tables.TableConfig('schedules', 'source_updated_at', None), None),
-        (tables.TableConfig('sites', None, 'id'), None),
+        (
+            tables.TableConfig(
+                name='aaha_accounts',
+                checksum_column='id'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='clients',
+                checksum_column='vetsuccess_id',
+                order_by='vetsuccess_id'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='client_attributes',
+                checksum_column='vetsuccess_id'
+            ), None
+        ),
+        (
+            tables.CodeTableConfig(
+                name='codes',
+                checksum_column='vetsuccess_id'
+            ), db.CodeAdditionalDataFetcher
+        ),
+        (
+            tables.TableConfig(
+                name='dates',
+                checksum_column='record_date'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='emails',
+                checksum_column='vetsuccess_id',
+                order_by='client_vetsuccess_id'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='invoices',
+                timestamp_column='source_updated_at'
+            ), None
+        ),
+        (
+            tables.PatientTableConfig(
+                name='patients',
+                checksum_column='vetsuccess_id',
+                order_by='client_vetsuccess_id'
+            ), None
+        ),
+        (
+            tables.PatientCoOwnerTableConfig(
+                name='client_patient_relationships',
+                checksum_column='patient_vetsuccess_id'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='payment_transactions',
+                timestamp_column='source_updated_at'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='phones',
+                checksum_column='vetsuccess_id'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='practices',
+                checksum_column='id'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='reminders',
+                timestamp_column='source_updated_at'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='resources',
+                checksum_column='vetsuccess_id'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='revenue_transactions',
+                timestamp_column='source_updated_at'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='schedules',
+                timestamp_column='source_updated_at'
+            ), None
+        ),
+        (
+            tables.TableConfig(
+                name='sites',
+                checksum_column='vetsuccess_id'
+            ), None
+        ),
     )
 
     for (table, addtional_fetcher), (expect_table, expect_additonal_fetcher) in zip(conn.get_tables(), expected):
