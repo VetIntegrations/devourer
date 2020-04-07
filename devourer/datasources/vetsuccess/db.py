@@ -212,13 +212,14 @@ class TimestampStorage:
     def __init__(self, table_name: str, redis: aioredis.ConnectionsPool):
         self.table_name = table_name
         self.redis = redis
+        self.timestamp = None
 
     async def __aenter__(self):
-        self.new_timestamp = int(time.time())
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        await self.redis.set(self.get_storage_key(), self.new_timestamp)
+        if self.timestamp:
+            await self.redis.set(self.get_storage_key(), self.timestamp)
 
     async def get_latest(self) -> int:
         ts = await self.redis.get(self.get_storage_key())
@@ -229,6 +230,9 @@ class TimestampStorage:
             last_update = datetime.fromtimestamp(int(ts))
 
         return last_update
+
+    def set_timestamp(self, row_time):
+        self.timestamp = int(row_time)
 
     def get_storage_key(self) -> str:
         return 'devourer.datasource.versuccess.timestamp-{}'.format(
@@ -260,7 +264,9 @@ class TimestampedTableFetcher:
                         ]
 
                         async for rawdata in cur:
-                            yield dict(zip(column_names, rawdata))
+                            data = dict(zip(column_names, rawdata))
+                            yield data
+                            stor.set_timestamp(data[self.table.timestamp_column])
 
                         if cur.rowcount == 0:
                             break
