@@ -94,8 +94,8 @@ def test_table_to_import():
         ),
         (
             tables.TableConfig(
-                name='revenue_transactions',
-                timestamp_column='source_updated_at'
+                name='normalized_transactions',
+                timestamp_column='updated_at'
             ), None
         ),
         (
