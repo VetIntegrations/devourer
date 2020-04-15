@@ -51,111 +51,111 @@ class DB:
 
     def get_tables(self) -> typing.Iterable[typing.Tuple[tables.TableConfig, typing.Any]]:
         return (
-            (
-                tables.TableConfig(
-                    name='aaha_accounts',
-                    checksum_column='id'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='clients',
-                    checksum_column='vetsuccess_id',
-                    order_by='vetsuccess_id'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='client_attributes',
-                    checksum_column='vetsuccess_id'
-                ), None
-            ),
-            (
-                tables.CodeTableConfig(
-                    name='codes',
-                    checksum_column='vetsuccess_id'
-                ), CodeAdditionalDataFetcher
-            ),
-            (
-                tables.TableConfig(
-                    name='dates',
-                    checksum_column='record_date'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='emails',
-                    checksum_column='vetsuccess_id',
-                    order_by='client_vetsuccess_id'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='invoices',
-                    timestamp_column='source_updated_at'
-                ), None
-            ),
-            (
-                tables.PatientTableConfig(
-                    name='patients',
-                    checksum_column='vetsuccess_id',
-                    order_by='client_vetsuccess_id'
-                ), None
-            ),
-            (
-                tables.PatientCoOwnerTableConfig(
-                    name='client_patient_relationships',
-                    checksum_column='patient_vetsuccess_id'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='payment_transactions',
-                    timestamp_column='source_updated_at'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='phones',
-                    checksum_column='vetsuccess_id'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='practices',
-                    checksum_column='id'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='reminders',
-                    timestamp_column='source_updated_at'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='resources',
-                    checksum_column='vetsuccess_id'
-                ), None
-            ),
+            # (
+            #     tables.TableConfig(
+            #         name='aaha_accounts',
+            #         checksum_column='id'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='clients',
+            #         checksum_column='vetsuccess_id',
+            #         order_by='vetsuccess_id'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='client_attributes',
+            #         checksum_column='vetsuccess_id'
+            #     ), None
+            # ),
+            # (
+            #     tables.CodeTableConfig(
+            #         name='codes',
+            #         checksum_column='vetsuccess_id'
+            #     ), CodeAdditionalDataFetcher
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='dates',
+            #         checksum_column='record_date'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='emails',
+            #         checksum_column='vetsuccess_id',
+            #         order_by='client_vetsuccess_id'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='invoices',
+            #         timestamp_column='source_updated_at'
+            #     ), None
+            # ),
+            # (
+            #     tables.PatientTableConfig(
+            #         name='patients',
+            #         checksum_column='vetsuccess_id',
+            #         order_by='client_vetsuccess_id'
+            #     ), None
+            # ),
+            # (
+            #     tables.PatientCoOwnerTableConfig(
+            #         name='client_patient_relationships',
+            #         checksum_column='patient_vetsuccess_id'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='payment_transactions',
+            #         timestamp_column='source_updated_at'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='phones',
+            #         checksum_column='vetsuccess_id'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='practices',
+            #         checksum_column='id'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='reminders',
+            #         timestamp_column='source_updated_at'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='resources',
+            #         checksum_column='vetsuccess_id'
+            #     ), None
+            # ),
             (
                 tables.TableConfig(
                     name='normalized_transactions',
                     timestamp_column='updated_at'
                 ), None
             ),
-            (
-                tables.TableConfig(
-                    name='schedules',
-                    timestamp_column='source_updated_at'
-                ), None
-            ),
-            (
-                tables.TableConfig(
-                    name='sites',
-                    checksum_column='vetsuccess_id'
-                ), None
-            ),
+            # (
+            #     tables.TableConfig(
+            #         name='schedules',
+            #         timestamp_column='source_updated_at'
+            #     ), None
+            # ),
+            # (
+            #     tables.TableConfig(
+            #         name='sites',
+            #         checksum_column='vetsuccess_id'
+            #     ), None
+            # ),
         )
 
 
@@ -208,18 +208,20 @@ class ChecksumStorage:
 
 
 class TimestampStorage:
+    SAVE_THRESHOLD = 1000
 
     def __init__(self, table_name: str, redis: aioredis.ConnectionsPool):
         self.table_name = table_name
         self.redis = redis
         self.timestamp = None
+        self._debounce = 0
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         if self.timestamp:
-            await self.redis.set(self.get_storage_key(), self.timestamp)
+            await self._save_to_redis()
 
     async def get_latest(self) -> int:
         ts = await self.redis.get(self.get_storage_key())
@@ -231,15 +233,23 @@ class TimestampStorage:
 
         return last_update
 
-    def set_timestamp(self, row_time):
+    async def set_timestamp(self, row_time):
         if isinstance(row_time, datetime):
             row_time = time.mktime(row_time.timetuple())
         self.timestamp = int(row_time)
+
+        self._debounce += 1
+        if self._debounce > self.SAVE_THRESHOLD:
+            await self._save_to_redis()
+            self._debounce = 0
 
     def get_storage_key(self) -> str:
         return 'devourer.datasource.versuccess.timestamp-{}'.format(
             self.table_name
         )
+
+    async def _save_to_redis(self):
+        await self.redis.set(self.get_storage_key(), self.timestamp)
 
 
 class TimestampedTableFetcher:
@@ -256,9 +266,9 @@ class TimestampedTableFetcher:
                     timestamp = await stor.get_latest()
                     sql = self.table.get_sql() % {'timestamp': timestamp.isoformat()}
                     offset = 0
-                    limit = 10000
+                    limit = 500000
                     while True:
-                        await cur.execute(f'{sql} LIMIT {limit} OFFSET {offset}')
+                        await cur.execute(f'{sql} LIMIT {limit} OFFSET {offset}', timeout=60 * 15)
 
                         column_names = [
                             column.name
@@ -268,7 +278,7 @@ class TimestampedTableFetcher:
                         async for rawdata in cur:
                             data = dict(zip(column_names, rawdata))
                             yield data
-                            stor.set_timestamp(data[self.table.timestamp_column])
+                            await stor.set_timestamp(data[self.table.timestamp_column])
 
                         if cur.rowcount == 0:
                             break
