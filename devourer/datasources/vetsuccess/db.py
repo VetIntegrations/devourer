@@ -232,6 +232,8 @@ class TimestampStorage:
         return last_update
 
     def set_timestamp(self, row_time):
+        if isinstance(row_time, datetime):
+            row_time = time.mktime(row_time.timetuple())
         self.timestamp = int(row_time)
 
     def get_storage_key(self) -> str:
