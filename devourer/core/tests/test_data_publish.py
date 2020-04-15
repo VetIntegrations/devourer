@@ -23,6 +23,9 @@ def test_datapublisher(monkeypatch):
 
     class FakePublisherClient:
 
+        def __init__(self, *args, **kwargs):
+            ...
+
         def topic_path(self, project_id, topic_name):
             log.append(('topic_path', project_id, topic_name))
             return f'{project_id}/{topic_name}'
@@ -38,10 +41,10 @@ def test_datapublisher(monkeypatch):
 
     assert len(log) == 0
     publisher = data_publish.DataPublisher()
-    assert publisher.publish({'msg': 'Hello'})
+    assert publisher.futures.qsize() == 0
+    publisher.publish({'msg': 'Hello'})
+    assert publisher.futures.qsize() == 1
     assert log == [
         ('topic_path', TEST_GCP_PROJECT_ID, TEST_GCP_PUBSUB_PUBLIC_TOPIC),
         ('publish', f'{TEST_GCP_PROJECT_ID}/{TEST_GCP_PUBSUB_PUBLIC_TOPIC}', b'{"msg": "Hello"}'),
-        'future-result',
-        'future-done',
     ]

@@ -3,7 +3,6 @@ import queue
 import threading
 import os
 import logging
-import sentry_sdk
 from google.cloud import pubsub_v1
 
 from devourer import config

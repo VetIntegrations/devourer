@@ -1,4 +1,3 @@
-import asyncio
 from aiohttp import web
 
 from devourer.core import data_publish
@@ -14,7 +13,6 @@ async def import_run(request, customer_name: str = None) -> web.Response:
     )
     publisher = data_publish.DataPublisher()
 
-    loop = asyncio.get_event_loop()
     async for table_name, record in conn.get_updates():
         publisher.publish(
             {

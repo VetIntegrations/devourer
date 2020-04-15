@@ -13,6 +13,12 @@ async def test_import_run(aiohttp_client, monkeypatch):
         def publish(self, msg):
             log.append(('publish', msg))
 
+        def exit(self):
+            log.append('publisher.exit')
+
+        def wait(self):
+            log.append('publisher.wait')
+
     class DB:
 
         async def get_updates(self):
@@ -74,4 +80,6 @@ async def test_import_run(aiohttp_client, monkeypatch):
                 'data': 3,
             },
         ),
+        'publisher.exit',
+        'publisher.wait',
     ]
