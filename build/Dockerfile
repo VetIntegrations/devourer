@@ -16,4 +16,4 @@ RUN apt-get purge -y --auto-remove build-essential
 
 EXPOSE 80
 
-CMD gunicorn devourer.main:get_application --bind 0.0.0.0:80 --worker-class aiohttp.GunicornWebWorker
+CMD gunicorn devourer.main:get_application --bind 0.0.0.0:80 --worker-class aiohttp.GunicornWebWorker --timeout 3600

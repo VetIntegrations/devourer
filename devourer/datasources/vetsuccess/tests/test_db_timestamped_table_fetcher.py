@@ -31,7 +31,7 @@ TIMESTAMP_LINE_2 = "1574346732"  # +2 seconds
                     (
                         f"SELECT * FROM external.test "
                         f"WHERE update_at >= '{TIMESTAMP_DT}'::timestamp "
-                        "ORDER BY id  LIMIT 10000 OFFSET 0"
+                        "ORDER BY id  LIMIT 500000 OFFSET 0"
                     ),
                 ),
                 ('set', 'devourer.datasource.versuccess.timestamp-test', int(TIMESTAMP_LINE_2)),  # set last timestamp
@@ -50,7 +50,7 @@ TIMESTAMP_LINE_2 = "1574346732"  # +2 seconds
                     (
                         "SELECT * FROM external.testing "
                         f"WHERE update_at >= '{TIMESTAMP_DT}'::timestamp "
-                        "ORDER BY id  LIMIT 10000 OFFSET 0"
+                        "ORDER BY id  LIMIT 500000 OFFSET 0"
                     )
                 ),
                 ('set', 'devourer.datasource.versuccess.timestamp-testing', int(TIMESTAMP_LINE_1)),
@@ -114,7 +114,7 @@ class FakeDB:
     def rowcount(self):
         return 0
 
-    async def execute(self, sql):
+    async def execute(self, sql, timeout=None):
         self.log.append(('execute', sql))
 
     async def __aenter__(self):
