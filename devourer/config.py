@@ -23,8 +23,8 @@ GCP_PUBSUB_PUBLIC_TOPIC = env.str('GCP_PUBSUB_PUBLIC_TOPIC')
 CUSTOMERS = {
     'rarebreed': {
         'name': 'Rarebreed',
-        'datasources': ('vetsuccess', ),
-    }
+        'datasources': ('vetsuccess', 'bitwerx', ),
+    },
 }
 
 
