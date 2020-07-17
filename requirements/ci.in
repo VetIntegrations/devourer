@@ -1,5 +1,6 @@
 -r common.in
 
+asynctest
 pytest
 pytest-aiohttp
 pytest-cov

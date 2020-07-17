@@ -27,6 +27,7 @@ CUSTOMERS = {
     },
 }
 
+BITWERX_TIMEOUT = 5 * 60
 
 SENTRY_DSN = env.str('SENTRY_DSN')
 
