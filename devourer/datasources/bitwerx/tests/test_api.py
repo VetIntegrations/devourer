@@ -8,6 +8,7 @@ from aiohttp import ClientSession
 
 from devourer import config
 from devourer.main import get_application
+from devourer.core import data_publish
 from devourer.utils import secret_manager
 from devourer.datasources.bitwerx import api
 from ..api import (
@@ -162,6 +163,7 @@ class TestImportRun:
         assert resp.status == 404
 
     async def test_all_requests_are_successful(self, bitwerx_client, monkeypatch):
+        monkeypatch.setattr(data_publish, 'DataPublisher', mock.Mock())
         monkeypatch.setattr(ClientSession, 'post', CoroutineMock(return_value=self.FakeResponse(status=202)))
 
         mock_download_response_status = CoroutineMock(return_value=(True, self.FakeResponse(status=200)))
@@ -182,6 +184,7 @@ class TestImportRun:
         monkeypatch.setattr(ClientSession, 'post', CoroutineMock(return_value=self.FakeResponse(status=400)))
         monkeypatch.setattr(api, 'get_last_updated_date', mock_get_last_updated_date)
         monkeypatch.setattr(api, 'set_last_updated_date', mock_set_last_updated_date)
+        monkeypatch.setattr(data_publish, 'DataPublisher', mock.Mock())
 
         await bitwerx_client.get('/api/v1/import/test-customer/bitwerx/')
 
@@ -201,3 +204,55 @@ class TestImportRun:
 
         mock_get_last_updated_date.assert_awaited_once()
         mock_set_last_updated_date.assert_awaited_once()
+
+    async def test_data_publish(self, bitwerx_client, monkeypatch):
+
+        log = []
+
+        class FakePublisher:
+            def publish(self, msg):
+                log.append(('publish', msg))
+
+            def exit(self):
+                log.append('publisher.exit')
+
+            def wait(self):
+                log.append('publisher.wait')
+
+        test_updated_date_1 = '2020-07-29T06:00:00.0000000'
+        test_updated_date_2 = '2020-07-29T07:00:00.0000000'
+
+        mock_download_response_status = CoroutineMock(return_value=(True, self.FakeResponse(status=200)))
+        mock_get_data = CoroutineMock(
+            return_value=[
+                {'ID': 1, 'Updated': test_updated_date_1},
+                {'ID': 2, 'Updated': test_updated_date_2}
+            ]
+        )
+
+        monkeypatch.setattr(data_publish, 'DataPublisher', FakePublisher)
+        monkeypatch.setattr(ClientSession, 'post', CoroutineMock(return_value=self.FakeResponse(status=202)))
+        monkeypatch.setattr(api, 'get_download_response_status', mock_download_response_status)
+        monkeypatch.setattr(api, 'get_data', mock_get_data)
+
+        resp = await bitwerx_client.get('/api/v1/import/test-customer/bitwerx/')
+        mock_download_response_status.assert_awaited_once()
+        mock_get_data.assert_awaited_once()
+        assert resp.status == 200
+
+        assert log == [
+            (
+                'publish',
+                {
+                    'meta': {'customer': 'test-customer', 'data_source': 'bitwerx', 'table_name': 'lineitem'},
+                    'data': {'ID': 1, 'Updated': test_updated_date_1},
+                }
+            ),
+            (
+                'publish',
+                {
+                    'meta': {'customer': 'test-customer', 'data_source': 'bitwerx', 'table_name': 'lineitem'},
+                    'data': {'ID': 2, 'Updated': test_updated_date_2},
+                }
+            ),
+        ]
