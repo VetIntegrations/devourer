@@ -6,6 +6,7 @@ import logging
 from aiohttp import web, ClientSession, BasicAuth
 
 from devourer import config
+from devourer.core import data_publish
 
 logger = logging.getLogger('devourer.datasource.bitwerx')
 
@@ -93,8 +94,20 @@ async def import_run(request, customer_name: str = None) -> web.Response:
             if response.status == 200:
                 data = await get_data(session, response)
 
+                publisher = data_publish.DataPublisher()
                 max_updated_date = datetime.datetime(1, 1, 1, 0, 0)
                 for item in data:
+                    publisher.publish(
+                        {
+                            'meta': {
+                                'customer': customer_name,
+                                'data_source': 'bitwerx',
+                                'table_name': 'lineitem',
+                            },
+                            'data': item,
+                        }
+                    )
+
                     updated_date = datetime.datetime.strptime(item['Updated'][:-1], format_timestamp)
                     max_updated_date = max(max_updated_date, updated_date)
 
