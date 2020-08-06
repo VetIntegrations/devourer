@@ -235,9 +235,14 @@ class TestImportRun:
         monkeypatch.setattr(api, 'get_download_response_status', mock_download_response_status)
         monkeypatch.setattr(api, 'get_data', mock_get_data)
 
+        monkeypatch.setattr(api, 'validate_line_item', mock.Mock(return_value=False))
         resp = await bitwerx_client.get('/api/v1/import/test-customer/bitwerx/')
         mock_download_response_status.assert_awaited_once()
         mock_get_data.assert_awaited_once()
+        assert resp.status == 422
+
+        monkeypatch.setattr(api, 'validate_line_item', mock.Mock(return_value=True))
+        resp = await bitwerx_client.get('/api/v1/import/test-customer/bitwerx/')
         assert resp.status == 200
 
         assert log == [
