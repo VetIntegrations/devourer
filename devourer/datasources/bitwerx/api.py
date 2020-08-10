@@ -7,6 +7,8 @@ from aiohttp import web, ClientSession, BasicAuth
 
 from devourer import config
 from devourer.core import data_publish
+from .validators import validate_line_item
+
 
 logger = logging.getLogger('devourer.datasource.bitwerx')
 
@@ -96,7 +98,14 @@ async def import_run(request, customer_name: str = None) -> web.Response:
 
                 publisher = data_publish.DataPublisher()
                 max_updated_date = datetime.datetime(1, 1, 1, 0, 0)
+
+                data_is_valid = True
                 for item in data:
+                    if not validate_line_item(item):
+                        data_is_valid = False
+                        web_response = web.Response(status=422)
+                        break
+
                     publisher.publish(
                         {
                             'meta': {
@@ -111,8 +120,8 @@ async def import_run(request, customer_name: str = None) -> web.Response:
                     updated_date = datetime.datetime.strptime(item['Updated'][:-1], format_timestamp)
                     max_updated_date = max(max_updated_date, updated_date)
 
-                # after successfully publish
-                await set_last_updated_date(redis, practice_id, max_updated_date)
+                if data_is_valid:
+                    await set_last_updated_date(redis, practice_id, max_updated_date)
             else:
                 web_response = web.Response(status=404)
         else:
@@ -122,6 +131,7 @@ async def import_run(request, customer_name: str = None) -> web.Response:
 
     # publish
     await session.close()
+
     logger.info(
         f'{customer_name}: Bitwerx data source, practiceId - {payload["practiceId"]},'
         f' status code - {web_response.status}'
