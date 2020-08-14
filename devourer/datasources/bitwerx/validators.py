@@ -1,5 +1,5 @@
 import logging
-from jsonschema import validate, ValidationError
+from jsonschema import Draft7Validator
 
 logger = logging.getLogger('devourer.datasource.bitwerx')
 
@@ -284,10 +284,11 @@ def validate_line_item(data):
     }
 
     success = True
-    try:
-        validate(instance=data, schema=schema)
-    except ValidationError as exc:
+
+    validator = Draft7Validator(schema)
+    errors = validator.iter_errors(data)
+    if errors:
         success = False
-        logging.error(exc)
+        logging.error('%s\n%s', data, '\n'.join([er.message for er in errors]))
 
     return success

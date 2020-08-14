@@ -225,8 +225,8 @@ class TestImportRun:
         mock_download_response_status = CoroutineMock(return_value=(True, self.FakeResponse(status=200)))
         mock_get_data = CoroutineMock(
             return_value=[
-                {'ID': 1, 'Updated': test_updated_date_1},
-                {'ID': 2, 'Updated': test_updated_date_2}
+                {'ID': 1, 'updated': test_updated_date_1},
+                {'ID': 2, 'updated': test_updated_date_2}
             ]
         )
 
@@ -250,14 +250,14 @@ class TestImportRun:
                 'publish',
                 {
                     'meta': {'customer': 'test-customer', 'data_source': 'bitwerx', 'table_name': 'lineitem'},
-                    'data': {'ID': 1, 'Updated': test_updated_date_1},
+                    'data': {'ID': 1, 'updated': test_updated_date_1},
                 }
             ),
             (
                 'publish',
                 {
                     'meta': {'customer': 'test-customer', 'data_source': 'bitwerx', 'table_name': 'lineitem'},
-                    'data': {'ID': 2, 'Updated': test_updated_date_2},
+                    'data': {'ID': 2, 'updated': test_updated_date_2},
                 }
             ),
         ]
