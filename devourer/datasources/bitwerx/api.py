@@ -117,7 +117,7 @@ async def import_run(request, customer_name: str = None) -> web.Response:
                         }
                     )
 
-                    updated_date = datetime.datetime.strptime(item['Updated'][:-1], format_timestamp)
+                    updated_date = datetime.datetime.strptime(item['updated'][:-1], format_timestamp)
                     max_updated_date = max(max_updated_date, updated_date)
 
                 if data_is_valid:
