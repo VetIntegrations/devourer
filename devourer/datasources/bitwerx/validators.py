@@ -246,7 +246,7 @@ def validate_line_item(data):
         "properties": {
             "lineItemId": {"type": "string"},
             # "IsActive": {"type": "number"},
-            "isDeleted": {"type": "number"},
+            "isDeleted": {"type": "boolean"},
             # "SiteId": {"type": "string"},
             "updated": {"type": "string"},
             "created": {"type": "string"},
