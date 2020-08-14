@@ -244,7 +244,7 @@ def validate_line_item(data):
         },
         "type": "object",
         "properties": {
-            "transactionId": {"type": "string"},
+            "lineItemId": {"type": "string"},
             # "IsActive": {"type": "number"},
             "isDeleted": {"type": "number"},
             # "SiteId": {"type": "string"},
@@ -268,7 +268,7 @@ def validate_line_item(data):
             }
         },
         "required": [
-            "transactionId",
+            "lineItemId",
             "isDeleted",
             "updated",
             "created",
@@ -280,7 +280,6 @@ def validate_line_item(data):
             "lineAmount",
             "isVoided",
             "invoiceId",
-            "ResourceId",
         ]
     }
 
