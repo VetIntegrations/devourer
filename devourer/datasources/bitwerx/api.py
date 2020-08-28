@@ -106,6 +106,8 @@ async def import_run(request, customer_name: str = None) -> web.Response:
                         web_response = web.Response(status=422)
                         break
 
+                    item.setdefault('_practice_id', practice_id)
+
                     publisher.publish(
                         {
                             'meta': {
