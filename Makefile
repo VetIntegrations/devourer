@@ -1,5 +1,5 @@
 run:
-	gunicorn devourer.main:get_application --bind localhost:8000 --worker-class aiohttp.GunicornWebWorker --reload
+	gunicorn devourer.main:get_application --bind localhost:8000 --worker-class aiohttp.GunicornWebWorker --timeout 3600 --reload
 
 test:
 	python -m pytest --pylama -vv --showlocals --ignore=./tasks .

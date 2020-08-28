@@ -23,10 +23,11 @@ GCP_PUBSUB_PUBLIC_TOPIC = env.str('GCP_PUBSUB_PUBLIC_TOPIC')
 CUSTOMERS = {
     'rarebreed': {
         'name': 'Rarebreed',
-        'datasources': ('vetsuccess', ),
-    }
+        'datasources': ('vetsuccess', 'bitwerx', ),
+    },
 }
 
+BITWERX_TIMEOUT = 5 * 60
 
 SENTRY_DSN = env.str('SENTRY_DSN')
 

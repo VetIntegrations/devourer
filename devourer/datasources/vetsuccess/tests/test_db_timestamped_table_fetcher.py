@@ -8,14 +8,20 @@ from devourer.datasources.vetsuccess import db, tables
 TIMESTAMP = 1574346720  # 2019-11-21T16:32:00
 TIMESTAMP_DT = datetime.fromtimestamp(TIMESTAMP).strftime('%Y-%m-%dT%H:%M:%S')
 
+TIMESTAMP_LINE_1 = "1574346730"
+TIMESTAMP_LINE_2 = "1574346732"  # +2 seconds
+
 
 @pytest.mark.parametrize(
     'tableconfig, input_data, expected_result, expected_log',
     (
         (
             tables.TableConfig('test', 'update_at', None),
-            ((1, 'N1', 53), (2, 'N2', 103)),
-            [{'id': 1, 'name': 'N1', 'amount': 53}, {'id': 2, 'name': 'N2', 'amount': 103}],
+            ((1, 'N1', 53, TIMESTAMP_LINE_1), (2, 'N2', 103, TIMESTAMP_LINE_2)),
+            [
+                {'id': 1, 'name': 'N1', 'amount': 53, 'update_at': TIMESTAMP_LINE_1},
+                {'id': 2, 'name': 'N2', 'amount': 103, 'update_at': TIMESTAMP_LINE_2}
+            ],
             [
                 'acquire',
                 'cursor',
@@ -25,16 +31,16 @@ TIMESTAMP_DT = datetime.fromtimestamp(TIMESTAMP).strftime('%Y-%m-%dT%H:%M:%S')
                     (
                         f"SELECT * FROM external.test "
                         f"WHERE update_at >= '{TIMESTAMP_DT}'::timestamp "
-                        "ORDER BY id  LIMIT 10000 OFFSET 0"
+                        "ORDER BY id  LIMIT 500000 OFFSET 0"
                     ),
                 ),
-                ('set', 'devourer.datasource.versuccess.timestamp-test', TIMESTAMP),
+                ('set', 'devourer.datasource.versuccess.timestamp-test', int(TIMESTAMP_LINE_2)),  # set last timestamp
             ],
         ),
         (
-            tables.TableConfig('testing', 'refreshed_at', None),
-            ((2, 'N2', 103), ),
-            [{'id': 2, 'name': 'N2', 'amount': 103}, ],
+            tables.TableConfig('testing', 'update_at', None),
+            ((2, 'N2', 103, TIMESTAMP_LINE_1), ),
+            [{'id': 2, 'name': 'N2', 'amount': 103, 'update_at': TIMESTAMP_LINE_1}, ],
             [
                 'acquire',
                 'cursor',
@@ -43,24 +49,23 @@ TIMESTAMP_DT = datetime.fromtimestamp(TIMESTAMP).strftime('%Y-%m-%dT%H:%M:%S')
                     'execute',
                     (
                         "SELECT * FROM external.testing "
-                        f"WHERE refreshed_at >= '{TIMESTAMP_DT}'::timestamp "
-                        "ORDER BY id  LIMIT 10000 OFFSET 0"
+                        f"WHERE update_at >= '{TIMESTAMP_DT}'::timestamp "
+                        "ORDER BY id  LIMIT 500000 OFFSET 0"
                     )
                 ),
-                ('set', 'devourer.datasource.versuccess.timestamp-testing', TIMESTAMP),
+                ('set', 'devourer.datasource.versuccess.timestamp-testing', int(TIMESTAMP_LINE_1)),
             ],
         ),
     )
 )
-async def test_fetch(tableconfig, input_data, expected_result, expected_log, monkeypatch):
+async def test_fetch(tableconfig, input_data, expected_result, expected_log):
     log = []
 
     input_data = iter(input_data)
 
-    monkeypatch.setattr(db.time, 'time', lambda: TIMESTAMP)
     fetcher = db.TimestampedTableFetcher(
         tableconfig,
-        FakeDB(tableconfig.checksum_column, input_data, log),
+        FakeDB(input_data, log),
         FakeRedis(log, 1574346720)
     )
 
@@ -92,10 +97,10 @@ Column = namedtuple('Column', 'name')
 
 class FakeDB:
 
-    def __init__(self, checksum_column, input_data, log):
+    def __init__(self, input_data, log):
         self.log = log
         self.input_data = input_data
-        self.description = (Column('id'), Column('name'), Column('amount'), )
+        self.description = (Column('id'), Column('name'), Column('amount'), Column('update_at'))
 
     def acquire(self):
         self.log.append('acquire')
@@ -109,7 +114,7 @@ class FakeDB:
     def rowcount(self):
         return 0
 
-    async def execute(self, sql):
+    async def execute(self, sql, timeout=None):
         self.log.append(('execute', sql))
 
     async def __aenter__(self):
