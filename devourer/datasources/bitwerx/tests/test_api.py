@@ -250,14 +250,14 @@ class TestImportRun:
                 'publish',
                 {
                     'meta': {'customer': 'test-customer', 'data_source': 'bitwerx', 'table_name': 'lineitem'},
-                    'data': {'ID': 1, 'updated': test_updated_date_1},
+                    'data': {'ID': 1, 'updated': test_updated_date_1, '_practice_id': '1234|1'},
                 }
             ),
             (
                 'publish',
                 {
                     'meta': {'customer': 'test-customer', 'data_source': 'bitwerx', 'table_name': 'lineitem'},
-                    'data': {'ID': 2, 'updated': test_updated_date_2},
+                    'data': {'ID': 2, 'updated': test_updated_date_2, '_practice_id': '1234|1'},
                 }
             ),
         ]
