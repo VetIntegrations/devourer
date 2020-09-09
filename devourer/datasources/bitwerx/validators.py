@@ -4,7 +4,7 @@ from jsonschema import Draft7Validator
 logger = logging.getLogger('devourer.datasource.bitwerx')
 
 
-def validate_line_item(data):
+def validate_line_item(customer_name, data):
 
     schema = {
         "definitions": {
@@ -189,10 +189,14 @@ def validate_line_item(data):
             "taxonomyMappingItem": {
                 "type": "object",
                 "properties": {
-                        # "taxonomyNodeType": {"type": "string"},
-                        "taxonomyNodeLabel": {"type": "string"},
-                        "taxonomyValues": {"$ref": "#/definitions/taxonomyValuesObj"},
-
+                    # "taxonomyNodeType": {"type": "string"},
+                    "taxonomyNodeLabel": {"type": "string"},
+                    "taxonomyValues": {
+                        "oneOf": [
+                            {"type": "null"},
+                            {"$ref": "#/definitions/taxonomyValuesObj"}
+                        ]
+                    }
                 },
                 "required": [
                     # "taxonomyNodeType",
@@ -246,22 +250,23 @@ def validate_line_item(data):
         "properties": {
             "lineItemId": {"type": "string"},
             # "IsActive": {"type": "number"},
-            "isDeleted": {"type": "boolean"},
+            # "isDeleted": {"type": "boolean"},
             # "SiteId": {"type": "string"},
-            "updated": {"type": "string"},
-            "created": {"type": "string"},
+            # "updated": {"type": "string"},
+            # "created": {"type": "string"},
             "clientId": {"type": "string"},
             "patientId": {"type": "string"},
             "transactionDate": {"type": "string"},
             "description": {"type": "string"},
-            "quantity": {"type": "string"},
-            "lineAmount": {"type": "string"},
+            "quantity": {"type": "number"},
+            "lineAmount": {"type": "number"},
             "isVoided": {"type": "boolean"},
             "invoiceId": {"type": "string"},
             # "ItemId": {"type": "string"},
             # "ResourceId": {"type": "string"},
             "mappings": {
-                "type": "array",
+                "type": ["array", "null"],
+                "maxItems": 1,
                 "items": {
                     "$ref": "#/definitions/mappingItem"
                 }
@@ -286,9 +291,12 @@ def validate_line_item(data):
     success = True
 
     validator = Draft7Validator(schema)
-    errors = validator.iter_errors(data)
+    errors = list(validator.iter_errors(data))
     if errors:
         success = False
-        logging.error('%s\n%s', data, '\n'.join([er.message for er in errors]))
+        logging.error(
+            f'{customer_name}: Bitwerx data source import, invoiceId - {data["lineItemId"]}, '
+            f'errors: {" ,".join([er.message for er in errors])}',
+        )
 
     return success
