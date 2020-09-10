@@ -294,9 +294,11 @@ def validate_line_item(customer_name, data):
     errors = list(validator.iter_errors(data))
     if errors:
         success = False
-        logging.error(
-            f'{customer_name}: Bitwerx data source import, invoiceId - {data["lineItemId"]}, '
-            f'errors: {" ,".join([er.message for er in errors])}',
+        logger.error(
+            '%s: Bitwerx data source import, lineItemId - %s, errors: %s',
+            customer_name,
+            data["lineItemId"],
+            " ,".join([er.message for er in errors])
         )
 
     return success
