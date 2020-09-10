@@ -101,10 +101,9 @@ async def import_run(request, customer_name: str = None) -> web.Response:
 
                 data_is_valid = True
                 for item in data:
-                    if not validate_line_item(item):
+                    if not validate_line_item(customer_name, item):
                         data_is_valid = False
-                        web_response = web.Response(status=422)
-                        break
+                        continue
 
                     item.setdefault('_practice_id', practice_id)
 
