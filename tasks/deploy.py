@@ -6,12 +6,14 @@ from .utils import run_and_parse
 
 @task
 def build_image(ctx):
-    tag_name = 'gcr.io/ghost-dev-262216/devourer:v0.0.{}'.format(
+    tag_name = 'gcr.io/vis-dev-286313/devourer:v0.0.{}'.format(
         datetime.now().strftime('%Y%m%d%H%M')
     )
     ctx.run('docker build -t devourer -f build/Dockerfile .')
     ctx.run('docker tag devourer {}'.format(tag_name))
+    ctx.run('docker tag devourer gcr.io/vis-dev-286313/devourer:latest')
     ctx.run('docker push {}'.format(tag_name))
+    ctx.run('docker push gcr.io/vis-dev-286313/devourer:latest')
     print(tag_name)
 
 
