@@ -35,6 +35,9 @@ jobs:
             GCP_PUBSUB_PUBLIC_TOPIC: vis-devourer-test
             LOG_CONFIG_FILENAME: local.yml
             SENTRY_DSN:
+            CELERY_BROKER_URL: redis://localhost:6379/5
+            CELERY_RESULT_BACKEND: redis://localhost:6379/5
+            CELERY_TASK_ALWAYS_EAGER: on
           command: |
             . ../venv/bin/activate
             python -m pytest \
