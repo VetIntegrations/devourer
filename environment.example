@@ -1,0 +1,18 @@
+DEBUG=True
+
+LOG_LEVEL=DEBUG
+LOG_CONFIG_FILENAME=local.yml
+
+GCP_PROJECT_ID=
+GCP_PUBSUB_PUBLIC_TOPIC=vis-datagrinder-devlocal
+
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+CELERY_BROKER_URL=redis://localhost/6
+CELERY_RESULT_BACKEND=redis://localhost/6
+CELERY_TASK_ALWAYS_EAGER=off
+
+RAREBREED_VETSUCCESS_REDSHIFT_DSN="dbname=rarebreeddw user=??? password=??? host=rarebreeddw.cevja6wylzxi.us-east-1.redshift.amazonaws.com port=5439"
+
+SENTRY_DSN=

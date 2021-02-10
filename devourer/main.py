@@ -55,6 +55,8 @@ async def get_application() -> web.Application:
     app.on_startup.append(on_startup)
     app.on_shutdown.append(on_shutdown)
 
+    from .celery import app as celery_app  # noqa: configure celery tasks
+
     init_customers(app, '/api/v1/import')
 
     app.add_routes([

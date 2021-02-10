@@ -31,6 +31,19 @@ BITWERX_TIMEOUT = 5 * 60
 
 SENTRY_DSN = env.str('SENTRY_DSN')
 
+CELERY = {
+    'broker_url': env.str('CELERY_BROKER_URL'),
+    'task_always_eager': env.bool('CELERY_TASK_ALWAYS_EAGER', default=False),
+    'task_serializer': 'pickle',
+    'result_serializer': 'pickle',
+    'accept_content': ('application/x-python-serialize', ),
+    'result_backend': env.str('CELERY_RESULT_BACKEND'),
+    'timezone': 'UTC',
+    'beat_schedule': {
+
+    }
+}
+
 # Logging
 LOGGING_CONFIG = env.str('LOGGING_CONFIG', default='logging.config.dictConfig')
 log_config_path = os.path.join(
