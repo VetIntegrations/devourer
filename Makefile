@@ -5,7 +5,13 @@ worker:
 	celery -A devourer worker --loglevel=DEBUG -c 2 --beat --purge
 
 test:
-	python -m pytest --pylama -vv --showlocals --ignore=./tasks .
+	python -m pytest \
+		--pylama \
+		--bandit \
+		--cov=devourer \
+		-vv --showlocals \
+		--ignore=./tasks \
+		devourer/${TEST}
 
 coverage:
 	python -m pytest --pylama --cov=. --cov-report term --cov-report html:../tests_artifacts/cov_html --ignore=./tasks .

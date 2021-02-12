@@ -19,12 +19,18 @@ REDIS_DB = env.int('REDIS_DB', default=1)
 GCP_PROJECT_ID = env.str('GCP_PROJECT_ID')
 GCP_PUBSUB_PUBLIC_TOPIC = env.str('GCP_PUBSUB_PUBLIC_TOPIC')
 
+CONFIG_NAME = env.str('CONFIG_NAME', default='devourer-config')
+
 # Customers config
 CUSTOMERS = {
     'rarebreed': {
         'name': 'Rarebreed',
         'datasources': ('vetsuccess', 'bitwerx', ),
     },
+    'petwell': {
+        'name': 'PetWell',
+        'datasources': ('hubspot', ),
+    }
 }
 
 BITWERX_TIMEOUT = 5 * 60
