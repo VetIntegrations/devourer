@@ -1,0 +1,2 @@
+class DevourerException(Exception):
+    pass

@@ -29,6 +29,8 @@ attrs==19.3.0
     #   aiohttp
     #   jsonschema
     #   pytest
+bandit==1.7.0
+    # via pytest-bandit
 billiard==3.6.3.0
     # via celery
 brotlipy==0.7.0
@@ -67,6 +69,10 @@ coverage==4.5.4
     # via pytest-cov
 envparse==0.2.0
     # via -r requirements/common.in
+gitdb==4.0.5
+    # via gitpython
+gitpython==3.1.13
+    # via bandit
 google-api-core[grpc]==1.14.3
     # via
     #   google-cloud-core
@@ -118,6 +124,8 @@ multidict==4.5.2
     #   yarl
 packaging==19.2
     # via pytest
+pbr==5.5.1
+    # via stevedore
 pluggy==0.13.0
     # via pytest
 prompt-toolkit==3.0.14
@@ -154,19 +162,24 @@ pyrsistent==0.16.0
     # via jsonschema
 pytest-aiohttp==0.3.0
     # via -r requirements/ci.in
+pytest-bandit==0.5.2
+    # via -r requirements/ci.in
 pytest-cov==2.8.1
     # via -r requirements/ci.in
 pytest==5.3.0
     # via
     #   -r requirements/ci.in
     #   pytest-aiohttp
+    #   pytest-bandit
     #   pytest-cov
 pytz==2019.3
     # via
     #   celery
     #   google-api-core
-pyyaml==5.1.2
-    # via -r requirements/common.in
+pyyaml==5.4.1
+    # via
+    #   -r requirements/common.in
+    #   bandit
 redis==3.5.3
     # via celery
 requests==2.22.0
@@ -177,6 +190,7 @@ sentry-sdk==0.13.2
     # via -r requirements/common.in
 six==1.13.0
     # via
+    #   bandit
     #   click-repl
     #   google-api-core
     #   google-auth
@@ -185,8 +199,12 @@ six==1.13.0
     #   packaging
     #   protobuf
     #   pyrsistent
+smmap==3.0.5
+    # via gitdb
 snowballstemmer==2.0.0
     # via pydocstyle
+stevedore==3.3.0
+    # via bandit
 typing-extensions==3.7.4.3
     # via aiohttp
 urllib3==1.25.7

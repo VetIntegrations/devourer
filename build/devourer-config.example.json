@@ -1,0 +1,24 @@
+{
+    "customers": {
+        "<CUSTOMER SLUG>": {
+            "name": "<CUSTOMER NAME>",
+            "integrations": {
+                "hubspot": {
+                    "apikey": "<API KEY>",
+                    "objects": {
+                        "companies": {
+                            "priority": 0,
+                            "last_update_field": "hs_lastmodifieddate",
+                            "properties": ["description", "address2", "city", "phone", "country", "hs_lastmodifieddate", "zip", "state", "address", "annualrevenue", "createdate", "closedate", "lifecyclestage", "name", "num_associated_deals", "hs_num_open_deals", "type", "total_revenue", "numberofemployees", "hs_total_deal_value", "hs_object_id", "timezone", "state_zip", "fid14__c", "fid16__c", "fid17__c", "fid18__c"]
+                        },
+                        "deals": {
+                            "priority": 10,
+                            "last_update_field": "hs_lastmodifieddate",
+                            "properties": ["dealstage", "hs_lastmodifieddate", "notes_last_contacted", "notes_last_updated", "num_contacted_notes", "num_notes", "amount", "closedate", "createdate", "dealname", "dealtype", "description", "hs_object_id", "aaha_numeric", "status_of_the_visit", "submarket", "sys_date_change_this_year", "sys_date_changed_to_inactive__c", "sys_date_changed_to_loi_issued__c", "sys_date_changed_to_loi_signed__c", "sys_date_changed_to_new", "sys_date_changed_to_preliminary_talks__c", "sys_date_changed_to_prospect__c", "sys_date_changed_to_qst_in_review__c", "sys_date_changed_to_revisits__c", "sys_date_changed_to_warm_target", "sys_date_changed_to_won_acquired__c", "time_in_stage_loi_issued", "time_in_stage_loi_signed", "time_in_stage_qst_in_review", "competitor_name__c", "fid10__c", "fid12__c", "fid6__c", "fidprocessowner__c", "no_of_dvms__c", "number_of_exam_rooms__c", "offer_due__c", "post_close_plan__c", "pwp_home_office_visit__c", "reason_lost__c", "total_offer__c", "valuation_expectation__c", "x2014_revenue__c", "x2015_revenue__c", "x2016_revenue__c", "x2018_revenue__c", "x2019_revenue__c", "xx2017_revenue__c", "no_of_employees"]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

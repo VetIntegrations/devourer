@@ -6,6 +6,8 @@ from celery import Celery
 from sentry_sdk.integrations.celery import CeleryIntegration
 
 from devourer import config
+from devourer.utils.secret_manager import SecretManager
+from devourer.utils.customer_config import CustomerConfig, SecretManagerStorageBackend
 
 
 logger = logging.getLogger('devourer')
@@ -38,7 +40,7 @@ class DiscoverTasks:
             __import__(module[:-3])
 
 
-app = Celery('devourer')
+app = Celery('devourer', task_cls='devourer.utils.celery:DevourerBaseTask')
 app.config_from_object(config.CELERY)
 if getattr(config, 'SENTRY_DSN'):
     sentry_sdk.init(
@@ -47,5 +49,13 @@ if getattr(config, 'SENTRY_DSN'):
     )
 else:
     warnings.warn('Sentry disabled')
+
+# TODO: move to proper place to run for celery and api
+customer_config = CustomerConfig()
+customer_config.set_storage_backend(
+    SecretManagerStorageBackend(
+        SecretManager(config.GCP_PROJECT_ID)
+    )
+)
 
 DiscoverTasks.discover()
