@@ -1,0 +1,18 @@
+FROM python:3.8-slim
+
+RUN useradd user
+
+WORKDIR /devourer
+
+COPY devourer/ devourer/
+COPY requirements requirements/
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip install -r requirements/common.txt
+RUN apt-get purge -y --auto-remove build-essential
+
+USER user
+
+CMD celery -A devourer worker --loglevel=INFO -c 4
