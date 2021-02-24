@@ -7,3 +7,7 @@ class HubSpotException(DevourerException):
 
 class HubSpotDatetimeFormatParseException(HubSpotException):
     pass
+
+
+class HubSpotPipelineGettingException(HubSpotException):
+    pass
