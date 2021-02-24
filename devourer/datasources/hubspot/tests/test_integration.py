@@ -102,19 +102,22 @@ class TestHubSpotFetchUpdates:
             'after': '50',
         }
 
-        assert hs.get_api_request_params('companies', 500, last_update=b'50') == {
+        timestamp = int(time.time())
+        assert hs.get_api_request_params('companies', 500, last_update=datetime.fromtimestamp(timestamp)) == {
             'limit': 500,
             'properties': ('fld1', 'fld2'),
             'sorts': ['foo'],
-            'filterGroups': {
-                'filters': [
-                    {
-                        'value': 50 * 1000,
-                        'propertyName': 'foo',
-                        'operator': 'GT',
-                    },
-                ],
-            }
+            'filterGroups': [
+                {
+                    'filters': [
+                        {
+                            'value': timestamp * 1000,
+                            'propertyName': 'foo',
+                            'operator': 'GT',
+                        },
+                    ],
+                },
+            ]
         }
 
     def test_publish_object(self, mock_customerconfig, mock_publisher_client, monkeypatch):
@@ -146,10 +149,11 @@ class TestHubSpotFetchUpdates:
         assert ret == m_future
 
     def test_get_last_update(self, mock_customerconfig, mock_publisher_client):
-        m_redis = Mock(**{'get.return_value': b'bar'})
+        timestamp = int(time.time())
+        m_redis = Mock(**{'get.return_value': str(timestamp).encode('ascii')})
 
         hs = HubSpotFetchUpdates('test', m_redis, None)
-        assert hs.get_last_update('foo') == b'bar'
+        assert hs.get_last_update('foo') == datetime.fromtimestamp(timestamp)
         m_redis.get.assert_called_once_with('last-update__{}_{}'.format('test', 'foo'))
 
     def test_set_last_update(self, mock_customerconfig, mock_publisher_client):
@@ -185,6 +189,7 @@ class TestHubSpotFetchUpdates:
         m_publish_future = Mock()
         m_publish_object = Mock(return_value=m_publish_future)
         m_set_last_update = Mock()
+        m_transform_test_obj = Mock()
         hs = HubSpotFetchUpdates('test', m_redis, m_task)
 
         monkeypatch.setattr(integration, 'requests', m_requests)
@@ -193,22 +198,25 @@ class TestHubSpotFetchUpdates:
         monkeypatch.setattr(hs, 'publish_object', m_publish_object)
         monkeypatch.setattr(hs, 'get_last_update_field', Mock(return_value='last_update'))
         monkeypatch.setattr(hs, 'get_api_request_params', Mock(return_value=REQUEST_PARAMS))
+        hs._transform_test_obj = m_transform_test_obj
 
+        results = [RESULT1, RESULT2, ]
         m_response = Mock(**{
             'status_code': 200,
             'json.return_value': {
                 'paging': {'next': {'after': RESP_AFTER}},
-                'results': [RESULT1, RESULT2, ],
+                'results': results,
             },
         })
         m_requests.get.return_value = m_response
+        m_transform_test_obj.side_effect = results
 
         m_redis.get.return_value = None
-        hs.run('test-obj', 5)
+        hs.run('test_obj', 5)
         request_params = copy.copy(REQUEST_PARAMS)
         request_params.update({'hapikey': APIKEY})
         m_requests.get.assert_called_once_with(
-            'https://api.hubapi.com/crm/v3/objects/test-obj',
+            'https://api.hubapi.com/crm/v3/objects/test_obj',
             params=request_params
         )
         m_response.json.assert_called_once()
@@ -217,10 +225,11 @@ class TestHubSpotFetchUpdates:
         m_set_last_update.assert_not_called()
         m_task.delay.assert_called_once_with(
             customer_name='test',
-            obj_name='test-obj',
+            obj_name='test_obj',
             limit=5,
             after=RESP_AFTER
         )
+        assert m_transform_test_obj.call_count == len(results)
 
     def test_run_first_import_last_page(self, mock_customerconfig, mock_publisher_client, monkeypatch):
         APIKEY = 'r42hirr4hu3iort3o'
@@ -371,3 +380,75 @@ class TestHubSpotFetchUpdates:
         m_publish_future.assert_not_called()
         m_set_last_update.assert_not_called()
         m_task.delay.assert_not_called()
+
+    @pytest.mark.parametrize(
+        'dealstage_id, dealstage_value, expected_dealstage',
+        (
+            ('0a73c0fa-2051-49cb-aa2c-d613074d90cd', 'Revisits', 'Revisits'),
+            (None, '321', 'Original Stage'),
+        )
+    )
+    def test_transform_deals(
+        self,
+        dealstage_id, dealstage_value, expected_dealstage,
+        mock_customerconfig, mock_publisher_client, monkeypatch
+    ):
+        m_redis = Mock(**{'get.return_value': b'bar'})
+        m_task = Mock()
+        hs = HubSpotFetchUpdates('test', m_redis, m_task)
+
+        dealstage_associations = {dealstage_id: dealstage_value}
+        monkeypatch.setattr(hs, 'get_dealstage_associations', Mock(return_value=dealstage_associations))
+
+        deal = {
+            'id': '2722038824',
+            'properties': {
+                'amount': 1200000,
+                'closedate': '',
+                'dealname': 'Cat Hospital At Towson',
+                'dealstage': dealstage_id or expected_dealstage,
+                'hs_lastmodifieddate': '2020-11-12T02:45:41.741Z',
+                'hs_object_id': '2722038824',
+            },
+            'archived': False
+        }
+        expected_deal = copy.deepcopy(deal)
+        expected_deal['properties']['dealstage'] = expected_dealstage
+        assert hs._transform_deals(deal) == expected_deal
+
+    def test_get_dealstage_associations(self, mock_customerconfig, mock_publisher_client, monkeypatch):
+        m_requests = Mock()
+        monkeypatch.setattr(integration, 'requests', m_requests)
+        m_response = Mock(**{
+            'status_code': 200,
+            'json.return_value': {
+                'results': [
+                    {
+                        'stages': [
+                            {'id': 1, 'label': '1'},
+                        ]
+                    },
+                    {
+                        'stages': [
+                            {'id': 11, 'label': '11'},
+                            {'id': 22, 'label': '22'},
+                        ]
+                    },
+                ]
+            }
+        })
+        m_requests.get.return_value = m_response
+
+        m_redis = Mock(**{'get.return_value': b'bar'})
+        m_task = Mock()
+        hs = HubSpotFetchUpdates('test', m_redis, m_task)
+        monkeypatch.setattr(hs, 'get_api_request_auth_params', Mock(return_value={}))
+
+        m_redis.get.return_value = None  # turnoff caching
+        associations = hs.get_dealstage_associations()
+
+        assert associations == {
+            1: '1',
+            11: '11',
+            22: '22',
+        }

@@ -1,3 +1,4 @@
+import copy
 import logging
 import json
 import time
@@ -11,8 +12,8 @@ from google.cloud.pubsub_v1.publisher import futures
 from devourer import config
 from devourer.utils.constants import Integration, CONFIG_CUSTOMER_INTEGRATIONS_KEY
 from devourer.utils.customer_config import CustomerConfig
-from devourer.utils import json_helpers
-from .exception import HubSpotDatetimeFormatParseException
+from devourer.utils import json_helpers, cache
+from .exception import HubSpotDatetimeFormatParseException, HubSpotPipelineGettingException
 
 
 logger = logging.getLogger('devourer')
@@ -42,7 +43,13 @@ class HubSpotFetchUpdates:
     def get_last_update_field(self, obj_name: str) -> str:
         return self.hubspot_config['objects'][obj_name]['last_update_field']
 
-    def get_api_request_params(self, obj_name: str, limit: int, after: str = None, last_update: bytes = None) -> dict:
+    def get_api_request_params(
+        self,
+        obj_name: str,
+        limit: int,
+        after: str = None,
+        last_update: datetime = None
+    ) -> dict:
         params = {
             'limit': limit,
             'properties': self.hubspot_config['objects'][obj_name]['properties'],
@@ -52,17 +59,23 @@ class HubSpotFetchUpdates:
             params['after'] = after
 
         if last_update:
-            params['filterGroups'] = {
-                'filters': [
-                    {
-                        'value': int(last_update) * 1000,
-                        'propertyName': self.get_last_update_field(obj_name),
-                        'operator': 'GT',
-                    },
-                ],
-            }
+            timestamp = time.mktime(last_update.timetuple())
+            params['filterGroups'] = [
+                {
+                    'filters': [
+                        {
+                            'value': int(timestamp) * 1000,
+                            'propertyName': self.get_last_update_field(obj_name),
+                            'operator': 'GT',
+                        },
+                    ],
+                }
+            ]
 
         return params
+
+    def get_api_request_auth_params(self):
+        return {'hapikey': self.hubspot_config['apikey']}
 
     def publish_object(self, obj_name: str, obj: dict) -> futures.Future:
         data = {
@@ -80,7 +93,9 @@ class HubSpotFetchUpdates:
         )
 
     def get_last_update(self, obj_name: str) -> bytes:
-        return self.redis.get('last-update__{}_{}'.format(self.customer_name, obj_name))
+        timestamp = self.redis.get('last-update__{}_{}'.format(self.customer_name, obj_name))
+        if timestamp:
+            return datetime.fromtimestamp(int(timestamp))
 
     def set_last_update(self, obj_name: str, date: datetime):
         timestamp = time.mktime(date.timetuple())
@@ -89,10 +104,31 @@ class HubSpotFetchUpdates:
             int(timestamp)
         )
 
+    @cache.cached_method(5*60)
+    def get_dealstage_associations(self):
+        resp = requests.get('https://api.hubapi.com/crm/v3/pipelines/deals', params=self.get_api_request_auth_params())
+        if resp.status_code != 200:
+            raise HubSpotPipelineGettingException()
+
+        associations = {}
+        for pipeline in resp.json()['results']:
+            for stage in pipeline.get('stages', []):
+                associations[stage['id']] = stage['label']
+
+        return associations
+
+    def _transform_deals(self, data: dict):
+        associations = self.get_dealstage_associations()
+        transformed = copy.deepcopy(data)
+        if data.get('properties', {}).get('dealstage') in associations:
+            transformed['properties']['dealstage'] = associations[data['properties']['dealstage']]
+
+        return transformed
+
     def run(self, obj_name: str, limit: int, after: str = None):
         last_update = self.get_last_update(obj_name)
         params = self.get_api_request_params(obj_name, limit, after, last_update)
-        auth_params = {'hapikey': self.hubspot_config['apikey']}
+        auth_params = self.get_api_request_auth_params()
         if last_update:
             resp = requests.post(
                 f'https://api.hubapi.com/crm/v3/objects/{obj_name}/search',
@@ -126,6 +162,9 @@ class HubSpotFetchUpdates:
         futures = []
         new_last_update = last_update
         for item in data['results']:
+            if hasattr(self, f'_transform_{obj_name}'):
+                item = getattr(self, f'_transform_{obj_name}')(item)
+
             futures.append(
                 self.publish_object(obj_name, item)
             )
