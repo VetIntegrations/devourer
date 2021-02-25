@@ -31,6 +31,7 @@ DATETIME_FORMAT = (
 class HubSpotFetchUpdates:
 
     def __init__(self, customer_name: str, redis: Redis, task: celery.Task):
+        self._is_initial_import = None
         self.customer_name = customer_name
         self.redis = redis
         self.customer_config = CustomerConfig().get_customer_config(customer_name)
@@ -42,6 +43,9 @@ class HubSpotFetchUpdates:
             project_id=config.GCP_PROJECT_ID,
             topic=config.GCP_PUBSUB_PUBLIC_TOPIC,
         )
+
+    def force_set_is_initial_import(self, value: bool):
+        self._is_initial_import = value
 
     def get_last_update_field(self, obj_name: str) -> str:
         return self.hubspot_config['objects'][obj_name]['last_update_field']
@@ -86,6 +90,7 @@ class HubSpotFetchUpdates:
                 'customer': self.customer_name,
                 'data_source': 'hubspot',
                 'table_name': obj_name,
+                'is_initial_import': self._is_initial_import,
             },
             'data': obj,
         }
@@ -150,8 +155,36 @@ class HubSpotFetchUpdates:
 
         return transformed
 
+    def _process_objects(self, obj_name: str, results: typing.List[dict], last_update: typing.Union[None, datetime]):
+        objs_association = {}
+        if hasattr(self, f'_get_obj_association_for_{obj_name}'):
+            objs_association = getattr(self, f'_get_obj_association_for_{obj_name}')(
+                [item['id'] for item in results]
+            )
+
+        futures = []
+        new_last_update = last_update
+        for item in results:
+            if hasattr(self, f'_transform_{obj_name}'):
+                item = getattr(self, f'_transform_{obj_name}')(item, objs_association)
+
+            futures.append(
+                self.publish_object(obj_name, item)
+            )
+
+            timestamp = hubspot_datetime_parse(item['properties'][self.get_last_update_field(obj_name)])
+            if new_last_update:
+                new_last_update = max(new_last_update, timestamp)
+            else:
+                new_last_update = timestamp
+
+        return futures, new_last_update
+
     def run(self, obj_name: str, limit: int, after: str = None):
         last_update = self.get_last_update(obj_name)
+        if self._is_initial_import is None:
+            self._is_initial_import = not bool(last_update)
+
         params = self.get_api_request_params(obj_name, limit, after, last_update)
         auth_params = self.get_api_request_auth_params()
         if last_update:
@@ -179,32 +212,13 @@ class HubSpotFetchUpdates:
                 customer_name=self.customer_name,
                 obj_name=obj_name,
                 limit=limit,
-                after=data['paging']['next']['after']
+                after=data['paging']['next']['after'],
+                is_initial_import=self._is_initial_import
             )
         else:
             last_page = True
 
-        objs_association = {}
-        if hasattr(self, f'_get_obj_association_for_{obj_name}'):
-            objs_association = getattr(self, f'_get_obj_association_for_{obj_name}')(
-                [item['id'] for item in data['results']]
-            )
-
-        futures = []
-        new_last_update = last_update
-        for item in data['results']:
-            if hasattr(self, f'_transform_{obj_name}'):
-                item = getattr(self, f'_transform_{obj_name}')(item, objs_association)
-
-            futures.append(
-                self.publish_object(obj_name, item)
-            )
-
-            timestamp = hubspot_datetime_parse(item['properties'][self.get_last_update_field(obj_name)])
-            if new_last_update:
-                new_last_update = max(new_last_update, timestamp)
-            else:
-                new_last_update = timestamp
+        futures, new_last_update = self._process_objects(obj_name, data['results'], last_update)
 
         if last_page:
             self.set_last_update(obj_name, new_last_update)

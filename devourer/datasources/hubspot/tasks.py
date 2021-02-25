@@ -34,6 +34,8 @@ def hubspot_integration():
 
 
 @shared_task
-def hubspot_fetch_updates(customer_name: str, obj_name: str, limit: int, after: str = None):
+def hubspot_fetch_updates(customer_name: str, obj_name: str, limit: int, after: str = None, is_initial_import=None):
     fetcher = HubSpotFetchUpdates(customer_name, hubspot_fetch_updates.redis, hubspot_fetch_updates)
+    if is_initial_import:
+        fetcher.force_set_is_initial_import(is_initial_import)
     fetcher.run(obj_name, limit, after)
