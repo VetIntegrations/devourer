@@ -120,7 +120,8 @@ class TestHubSpotFetchUpdates:
             ]
         }
 
-    def test_publish_object(self, mock_customerconfig, mock_publisher_client, monkeypatch):
+    @pytest.mark.parametrize('is_initial_import', (None, False))
+    def test_publish_object(self, is_initial_import, mock_customerconfig, mock_publisher_client, monkeypatch):
         CUSTOMER_NAME = 'test-customer'
         OBJ_NAME = 'companies'
         hs = HubSpotFetchUpdates(CUSTOMER_NAME, None, None)
@@ -129,6 +130,7 @@ class TestHubSpotFetchUpdates:
         monkeypatch.setattr(hs, 'publisher', m_publisher)
 
         item = {'foo': 'bar'}
+        hs.force_set_is_initial_import(is_initial_import)
         ret = hs.publish_object(OBJ_NAME, item)
 
         msg = {
@@ -136,6 +138,7 @@ class TestHubSpotFetchUpdates:
                 'customer': CUSTOMER_NAME,
                 'data_source': 'hubspot',
                 'table_name': OBJ_NAME,
+                'is_initial_import': is_initial_import,
             },
             'data': item,
         }
@@ -213,6 +216,8 @@ class TestHubSpotFetchUpdates:
 
         m_redis.get.return_value = None
         hs.run('test_obj', 5)
+
+        assert hs._is_initial_import is True
         request_params = copy.copy(REQUEST_PARAMS)
         request_params.update({'hapikey': APIKEY})
         m_requests.get.assert_called_once_with(
@@ -227,7 +232,8 @@ class TestHubSpotFetchUpdates:
             customer_name='test',
             obj_name='test_obj',
             limit=5,
-            after=RESP_AFTER
+            after=RESP_AFTER,
+            is_initial_import=True
         )
         assert m_transform_test_obj.call_count == len(results)
 
@@ -268,7 +274,10 @@ class TestHubSpotFetchUpdates:
         m_requests.get.return_value = m_response
 
         m_redis.get.return_value = None
+        hs.force_set_is_initial_import(False)
         hs.run('test-obj', 5)
+
+        assert hs._is_initial_import is False
         request_params = copy.copy(REQUEST_PARAMS)
         request_params.update({'hapikey': APIKEY})
         m_requests.get.assert_called_once_with(
@@ -320,6 +329,7 @@ class TestHubSpotFetchUpdates:
         m_redis.get.return_value = None
         hs.run('test-obj', 5)
 
+        assert hs._is_initial_import is False
         m_requests.post.assert_called_once_with(
             'https://api.hubapi.com/crm/v3/objects/test-obj/search',
             params={'hapikey': APIKEY},
