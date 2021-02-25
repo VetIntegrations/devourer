@@ -400,21 +400,26 @@ class TestHubSpotFetchUpdates:
         dealstage_associations = {dealstage_id: dealstage_value}
         monkeypatch.setattr(hs, 'get_dealstage_associations', Mock(return_value=dealstage_associations))
 
+        ID = '2722038824'
+        objs_association = {
+            ID: {'foo': 'bar'},
+        }
         deal = {
-            'id': '2722038824',
+            'id': ID,
             'properties': {
                 'amount': 1200000,
                 'closedate': '',
                 'dealname': 'Cat Hospital At Towson',
                 'dealstage': dealstage_id or expected_dealstage,
                 'hs_lastmodifieddate': '2020-11-12T02:45:41.741Z',
-                'hs_object_id': '2722038824',
+                'hs_object_id': ID,
             },
             'archived': False
         }
         expected_deal = copy.deepcopy(deal)
         expected_deal['properties']['dealstage'] = expected_dealstage
-        assert hs._transform_deals(deal) == expected_deal
+        expected_deal['properties'].update(objs_association[ID])
+        assert hs._transform_deals(deal, objs_association) == expected_deal
 
     def test_get_dealstage_associations(self, mock_customerconfig, mock_publisher_client, monkeypatch):
         m_requests = Mock()
@@ -452,3 +457,26 @@ class TestHubSpotFetchUpdates:
             11: '11',
             22: '22',
         }
+
+    def test_get_obj_association_for_deals(self, mock_customerconfig, mock_publisher_client, monkeypatch):
+        m_requests = Mock()
+        monkeypatch.setattr(integration, 'requests', m_requests)
+        m_response = Mock(**{
+            'status_code': 207,
+            'json.return_value': {
+                'results': [
+                    {'from': {'id': 1}, 'to': [{'id': 11}]},
+                    {'from': {'id': 2}, 'to': [{'id': 22}, {'id': 221}]},
+                ]
+            }
+        })
+        m_requests.post.return_value = m_response
+
+        m_redis = Mock()
+        m_task = Mock()
+        hs = HubSpotFetchUpdates('test', m_redis, m_task)
+        monkeypatch.setattr(hs, 'get_api_request_auth_params', Mock(return_value={}))
+
+        obj_associations = hs._get_obj_association_for_deals([123, 234])
+
+        assert obj_associations == {'1': {'company_id': 11}, '2': {'company_id': 22}}

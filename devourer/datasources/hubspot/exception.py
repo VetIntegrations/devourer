@@ -11,3 +11,7 @@ class HubSpotDatetimeFormatParseException(HubSpotException):
 
 class HubSpotPipelineGettingException(HubSpotException):
     pass
+
+
+class HubSpotAssociationsGettingException(HubSpotException):
+    pass
