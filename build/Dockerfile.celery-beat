@@ -15,4 +15,4 @@ RUN apt-get purge -y --auto-remove build-essential
 
 USER user
 
-CMD celery -A devourer worker --loglevel=INFO --schedule /tmp/celerybeat-schedule
+CMD celery -A devourer beat --loglevel=INFO --schedule /tmp/celerybeat-schedule
