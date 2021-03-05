@@ -28,6 +28,10 @@ DATETIME_FORMAT = (
 )
 
 
+class HubSpotFetchException(Exception):
+    ...
+
+
 class HubSpotFetchUpdates:
 
     def __init__(self, customer_name: str, redis: Redis, task: celery.Task):
@@ -180,7 +184,7 @@ class HubSpotFetchUpdates:
 
         return futures, new_last_update
 
-    def run(self, obj_name: str, limit: int, after: str = None):
+    def fetch(self, obj_name: str, limit: int, after: str = None):
         last_update = self.get_last_update(obj_name)
         if self._is_initial_import is None:
             self._is_initial_import = not bool(last_update)
@@ -198,26 +202,21 @@ class HubSpotFetchUpdates:
             resp = requests.get(f'https://api.hubapi.com/crm/v3/objects/{obj_name}', params=params)
 
         if resp.status_code != 200:
-            logger.error(
+            raise HubSpotFetchException(
                 '[HubSpot: {}] unable to fetch {} after[{}]: {}'.format(
                     self.customer_name, obj_name, after, resp.status_code
                 )
             )
-            return
 
         last_page = False
         data = resp.json()
-        if data.get('paging', {}).get('next', {}).get('after'):
-            self.task.delay(
-                customer_name=self.customer_name,
-                obj_name=obj_name,
-                limit=limit,
-                after=data['paging']['next']['after'],
-                is_initial_import=self._is_initial_import
-            )
-        else:
+        if not data.get('paging', {}).get('next', {}).get('after'):
             last_page = True
 
+        return last_page, data
+
+    def push(self, obj_name: str, last_page: bool, data:  dict):
+        last_update = self.get_last_update(obj_name)
         futures, new_last_update = self._process_objects(obj_name, data['results'], last_update)
 
         if last_page:
